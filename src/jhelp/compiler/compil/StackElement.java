@@ -9,7 +9,7 @@ import com.sun.org.apache.bcel.internal.generic.Type;
  *
  * @author JHelp <br>
  */
-class StackElement
+public class StackElement
 {
    /** Embed type */
    private final Type type;

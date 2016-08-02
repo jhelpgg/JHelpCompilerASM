@@ -75,12 +75,67 @@ public class Compiler
       implements CompilerConstants
 {
    /** Pattern use to know if a string is a signature */
-   private static final Pattern  PATTERN_SIGNATURE = Pattern.compile("L[a-zA-Z][a-zA-Z0-9_/.]*;");
+   private static final Pattern PATTERN_SIGNATURE = Pattern.compile("L[a-zA-Z][a-zA-Z0-9_/.]*;");
+
+   /**
+    * Remove white spaces are between parenthesis to easy allow signature type (int, char, ..):boolean with spaces/tabs
+    * before/after the comma
+    *
+    * @param string
+    *           String to remove space between parenthesis
+    * @return String cleared
+    */
+   private static String removeWhiteSpaceBetweenParenthesis(final String string)
+   {
+      final char[] source = string.toCharArray();
+      final int length = source.length;
+      final char[] result = new char[length];
+      int size = 0;
+      int parenthesis = 0;
+      char character;
+
+      for(int index = 0; index < length; index++)
+      {
+         character = source[index];
+
+         switch(character)
+         {
+            case '(':
+               parenthesis++;
+               result[size] = character;
+               size++;
+            break;
+            case ')':
+               parenthesis--;
+               result[size] = character;
+               size++;
+            break;
+            default:
+               if(parenthesis > 0)
+               {
+                  if(character > ' ')
+                  {
+                     result[size] = character;
+                     size++;
+                  }
+               }
+               else
+               {
+                  result[size] = character;
+                  size++;
+               }
+            break;
+         }
+      }
+
+      return new String(result, 0, size);
+   }
 
    /** Compiler context */
    private final CompilerContext compilerContext;
    /** Current method */
    private MethodDescription     methodDescription;
+
    /** Line where current method code start */
    private int                   startBlockLineNumber;
 
@@ -207,6 +262,17 @@ public class Compiler
          }
 
          this.compilerContext.addField(parameters.get(1), parameters.get(0), lineNumber);
+         return;
+      }
+
+      if(CompilerConstants.FIELD_REFERENCE.equals(instruction) == true)
+      {
+         if(parameters.size() < 4)
+         {
+            throw new CompilerException(lineNumber, "Miss arguments in field_reference declaration !");
+         }
+
+         this.compilerContext.addFieldReference(parameters.get(0), parameters.get(1), parameters.get(2), parameters.get(3), lineNumber);
          return;
       }
 
@@ -369,7 +435,7 @@ public class Compiler
 
             if((line.length() > 0) && (line.startsWith("//") == false))
             {
-               this.parseLine(line, lineNumber);
+               this.parseLine(Compiler.removeWhiteSpaceBetweenParenthesis(line), lineNumber);
             }
 
             line = bufferedReader.readLine();

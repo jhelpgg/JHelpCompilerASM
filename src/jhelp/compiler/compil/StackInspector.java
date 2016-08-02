@@ -9,6 +9,7 @@ import com.sun.org.apache.bcel.internal.Constants;
 import com.sun.org.apache.bcel.internal.generic.AALOAD;
 import com.sun.org.apache.bcel.internal.generic.ALOAD;
 import com.sun.org.apache.bcel.internal.generic.ANEWARRAY;
+import com.sun.org.apache.bcel.internal.generic.ArrayType;
 import com.sun.org.apache.bcel.internal.generic.ConstantPoolGen;
 import com.sun.org.apache.bcel.internal.generic.GETFIELD;
 import com.sun.org.apache.bcel.internal.generic.GETSTATIC;
@@ -32,6 +33,7 @@ import com.sun.org.apache.bcel.internal.generic.IF_ICMPLT;
 import com.sun.org.apache.bcel.internal.generic.IF_ICMPNE;
 import com.sun.org.apache.bcel.internal.generic.INVOKEINTERFACE;
 import com.sun.org.apache.bcel.internal.generic.INVOKESPECIAL;
+import com.sun.org.apache.bcel.internal.generic.INVOKESTATIC;
 import com.sun.org.apache.bcel.internal.generic.INVOKEVIRTUAL;
 import com.sun.org.apache.bcel.internal.generic.Instruction;
 import com.sun.org.apache.bcel.internal.generic.InstructionHandle;
@@ -50,7 +52,6 @@ import com.sun.org.apache.bcel.internal.generic.PUTSTATIC;
 import com.sun.org.apache.bcel.internal.generic.TABLESWITCH;
 import com.sun.org.apache.bcel.internal.generic.Type;
 
-import jhelp.util.list.ArrayInt;
 import jhelp.util.list.Pair;
 import jhelp.util.text.UtilText;
 
@@ -66,7 +67,7 @@ class StackInspector
    /** Lines table */
    private final List<Pair<InstructionHandle, Integer>> linesTable;
    /** Path follow to reach current instruction */
-   private final ArrayInt                               path;
+   private final List<StackInfo>                        path;
    /** Actual stack state */
    private final List<StackElement>                     stack;
 
@@ -83,7 +84,7 @@ class StackInspector
       this.instructionList = instructionList;
       this.linesTable = linesTable;
       this.stack = new ArrayList<StackElement>();
-      this.path = new ArrayInt();
+      this.path = new ArrayList<StackInfo>();
    }
 
    /**
@@ -93,10 +94,10 @@ class StackInspector
     *           Handle of current instruction
     * @param types
     *           Types the stack must end with
-    * @throws CompilerException
+    * @throws StackInspectorException
     *            If stack not end with given types
     */
-   private void checkTypes(final InstructionHandle instructionHandle, final Type... types) throws CompilerException
+   private void checkTypes(final InstructionHandle instructionHandle, final Type... types) throws StackInspectorException
    {
       final int length = types.length;
       final int size = this.stack.size();
@@ -193,13 +194,12 @@ class StackInspector
     *           Handle where issue happen
     * @param message
     *           Message explain the issue
-    * @throws CompilerException
+    * @throws StackInspectorException
     *            Throws created exception
     */
-   private void throwException(final InstructionHandle instructionHandle, final String message) throws CompilerException
+   private void throwException(final InstructionHandle instructionHandle, final String message) throws StackInspectorException
    {
-      throw new CompilerException(this.obtainLineNumber(instructionHandle),
-            UtilText.concatenate(message, "\nStack state : ", this.stack, "\nPath=", this.path));
+      throw new StackInspectorException(this.obtainLineNumber(instructionHandle), this.stack, this.path, message);
    }
 
    /**
@@ -207,10 +207,10 @@ class StackInspector
     *
     * @param constantPool
     *           Constant pool that defines constants
-    * @throws CompilerException
+    * @throws StackInspectorException
     *            If one instruction in list don't respect the stack
     */
-   public void checkStack(final ConstantPoolGen constantPool) throws CompilerException
+   public void checkStack(final ConstantPoolGen constantPool) throws StackInspectorException
    {
       final InstructionHandle[] instructionHandles = this.instructionList.getInstructionHandles();
       final int length = instructionHandles.length;
@@ -230,6 +230,7 @@ class StackInspector
       int size, temp;
       boolean condition;
       StackElement type1, type2, type3, type4;
+      StackInfo stackInfo;
 
       while(stackExecution.isEmpty() == false)
       {
@@ -238,7 +239,8 @@ class StackInspector
          already.add(step);
          instructionHandle = instructionHandles[step.index];
          instruction = instructionHandle.getInstruction();
-         this.path.add(this.obtainLineNumber(instructionHandle));
+         stackInfo = new StackInfo(this.obtainLineNumber(instructionHandle), this.stack);
+         this.path.add(stackInfo);
          size = this.stack.size();
 
          switch(instruction.getOpcode())
@@ -2037,6 +2039,7 @@ class StackInspector
                }
 
                stackExecution.push(new Step(temp, this.stack, this.path));
+               stackInfo.appendEnd(this.stack);
                continue;
             // ... => ..., address
             case Constants.JSR:
@@ -2053,6 +2056,7 @@ class StackInspector
             break;
             // No change
             case Constants.RET:
+               stackInfo.appendEnd(this.stack);
                continue;
             // ..., key(int) => ...
             case Constants.TABLESWITCH:
@@ -2124,6 +2128,7 @@ class StackInspector
                   this.throwException(instructionHandle, "IRETURN need stack end with : int");
                }
 
+               stackInfo.appendEnd(this.stack);
                continue;
             // ..., value(long) => [empty]
             case Constants.LRETURN:
@@ -2133,6 +2138,7 @@ class StackInspector
                   this.throwException(instructionHandle, "LRETURN need stack end with : long");
                }
 
+               stackInfo.appendEnd(this.stack);
                continue;
             // ..., value(float) => [empty]
             case Constants.FRETURN:
@@ -2142,6 +2148,7 @@ class StackInspector
                   this.throwException(instructionHandle, "FRETURN need stack end with : float");
                }
 
+               stackInfo.appendEnd(this.stack);
                continue;
             // ..., value(double) => [empty]
             case Constants.DRETURN:
@@ -2151,6 +2158,7 @@ class StackInspector
                   this.throwException(instructionHandle, "DRETURN need stack end with : double");
                }
 
+               stackInfo.appendEnd(this.stack);
                continue;
             // ..., value(objectref) => [empty]
             case Constants.ARETURN:
@@ -2160,9 +2168,11 @@ class StackInspector
                   this.throwException(instructionHandle, "ARETURN need stack end with : objectref");
                }
 
+               stackInfo.appendEnd(this.stack);
                continue;
             // ... => [empty]
             case Constants.RETURN:
+               stackInfo.appendEnd(this.stack);
                continue;
             // ... => ..., value(?)
             case Constants.GETSTATIC:
@@ -2244,7 +2254,7 @@ class StackInspector
             break;
             // ..., [arg1(?), [arg2(?) ...]] => ...
             case Constants.INVOKESTATIC:
-               types = ((INVOKESPECIAL) instruction).getArgumentTypes(constantPool);
+               types = ((INVOKESTATIC) instruction).getArgumentTypes(constantPool);
                this.checkTypes(instructionHandle, types);
                this.pop(types.length);
             break;
@@ -2293,7 +2303,7 @@ class StackInspector
                }
 
                this.pop(1);
-               this.push(((ANEWARRAY) instruction).getType(constantPool));
+               this.push(new ArrayType(((ANEWARRAY) instruction).getType(constantPool), 1));
             break;
             // ..., arrayref => ..., length(int)
             case Constants.ARRAYLENGTH:
@@ -2314,6 +2324,7 @@ class StackInspector
                   this.throwException(instructionHandle, "ATHROW need stack end with : objectref");
                }
 
+               stackInfo.appendEnd(this.stack);
                continue;
             // ..., objectref => ..., objectref
             case Constants.CHECKCAST:
@@ -2370,7 +2381,7 @@ class StackInspector
                }
 
                this.pop(temp);
-               this.push(((MULTIANEWARRAY) instruction).getType(constantPool));
+               this.push(new ArrayType(((MULTIANEWARRAY) instruction).getType(constantPool), temp));
             break;
             // ..., objectref => ...
             case Constants.IFNULL:
@@ -2418,6 +2429,7 @@ class StackInspector
                }
 
                stackExecution.push(new Step(temp, this.stack, this.path));
+               stackInfo.appendEnd(this.stack);
                continue;
             // ... => ..., address
             case Constants.JSR_W:
@@ -2433,6 +2445,8 @@ class StackInspector
                this.pop(1);
             break;
          }
+
+         stackInfo.appendEnd(this.stack);
 
          if((step.index + 1) < length)
          {

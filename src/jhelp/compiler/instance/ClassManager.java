@@ -1,9 +1,21 @@
+/**
+ * <h1>License :</h1> <br>
+ * The following code is deliver as is. I take care that code compile and work, but I am not responsible about any damage it may
+ * cause.<br>
+ * You can use, modify, the code as your need for any usage. But you can't do any action that avoid me or other person use,
+ * modify this code. The code is free for usage and modification, you can't change that fact.<br>
+ * <br>
+ *
+ * @author JHelp
+ */
 package jhelp.compiler.instance;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -17,6 +29,7 @@ import jhelp.util.list.Pair;
 import jhelp.util.list.foreach.ForEach;
 import jhelp.util.list.foreach.ForEachAsyncListener;
 import jhelp.util.reflection.Reflector;
+import jhelp.util.text.UtilText;
 
 /**
  * Manage class instance and compilation of ASM files at the fly
@@ -136,7 +149,7 @@ public class ClassManager
    /** Action for compile one ASM */
    private final ActionCompile                                     actionCompile;
    /** Class loader where store compiled class */
-   private final JHelpClassLoader                                  classLoader;
+   private JHelpClassLoader                                        classLoader;
    /** Event manager */
    private final EventManager                                      eventManager;
    /** Class loader for external jars */
@@ -153,7 +166,7 @@ public class ClassManager
       this.classLoader = new JHelpClassLoader();
       this.jarClassLoader = new JHelpJarClassLoader();
       this.classLoader.add(this.jarClassLoader);
-      this.actionCompile = new ActionCompile(this.classLoader, this.eventManager);
+      this.actionCompile = new ActionCompile(this, this.eventManager);
       this.listeners = new HashInt<Pair<ClassManagerListener, List<String>>>();
    }
 
@@ -184,6 +197,19 @@ public class ClassManager
 
       ForEach.forEachAsync(sources, this.actionCompile, this.eventManager, compilationID);
       return compilationID;
+   }
+
+   /**
+    * Add class and its byte code
+    *
+    * @param className
+    *           Class to add
+    * @param data
+    *           Byte code
+    */
+   void addClass(final String className, final byte[] data)
+   {
+      this.classLoader.addClass(className, data);
    }
 
    /**
@@ -419,6 +445,46 @@ public class ClassManager
    }
 
    /**
+    * Indicates if given class is resolved (Can't be redefined, see {@link #newClassLoader()} for a trick)
+    *
+    * @param className
+    *           Class name
+    * @return {@code true} if given class is resolved
+    */
+   public boolean isResolved(final String className)
+   {
+      return this.classLoader.isLoaded(className);
+   }
+
+   /**
+    * List of methods of a class
+    *
+    * @param className
+    *           Class name
+    * @return List of methods
+    * @throws ClassNotFoundException
+    *            If given class name not know by the class manager
+    */
+   public Method[] listOfMethod(final String className) throws ClassNotFoundException
+   {
+      return this.classLoader.loadClass(className).getDeclaredMethods();
+   }
+
+   /**
+    * Make the class manager consider previous class resolution as invalid.<br>
+    * This way it is possible to change to code of same class several times, when they are already resolved.<br>
+    * Don't abuse this method it improve time and memory.<br>
+    * For not resolved class it is not necessary to call it, so check with {@link #isResolved(String)} to know if classes you
+    * want to compile are resolved or not !
+    */
+   public void newClassLoader()
+   {
+      final JHelpClassLoader classLoader = this.classLoader;
+      this.classLoader = new JHelpClassLoader();
+      this.classLoader.add(classLoader);
+   }
+
+   /**
     * Create instance of class known by the manager (Compiled with success or from JRE)
     *
     * @param <OBJECT>
@@ -433,5 +499,72 @@ public class ClassManager
    public <OBJECT> OBJECT newInstance(final String className) throws ClassNotFoundException
    {
       return (OBJECT) Reflector.newInstance(className, this.classLoader);
+   }
+
+   /**
+    * Create new instance of class on choosing the constructor specifically.<br>
+    * The method will search a constructor that match to given parameter and invoke it<br>
+    * Beware of usage of {@code null} as one of parameters it, if it ambiguous, the first constructor found that match with be
+    * used.<br>
+    * By example if class A have 2 constructor A(java.lang.String,int) and A(java.util.List,int) and call
+    * classManager.newInstance2("A", null, 2); Will choose one of the constructor, but you can't control witch one is called
+    *
+    * @param <OBJECT>
+    *           Instance type return
+    * @param className
+    *           Class name
+    * @param parameters
+    *           Parameters to give to constructor
+    * @return Created instance
+    * @throws ClassNotFoundException
+    *            If class not know by the class manager
+    * @throws NoSuchMethodException
+    *            If no constructor match for given parameters
+    * @throws InstantiationException
+    *            If construction failed (Exception happen on construction)
+    * @throws IllegalAccessException
+    *            If not allowed to call the constructor
+    * @throws IllegalArgumentException
+    *            If one argument is not valid
+    * @throws InvocationTargetException
+    *            On other issue
+    */
+   @SuppressWarnings("unchecked")
+   public <OBJECT> OBJECT newInstance2(final String className, final Object... parameters) throws ClassNotFoundException, NoSuchMethodException,
+         InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException
+   {
+      final Class<?> claz = this.classLoader.loadClass(className);
+      final Class<?>[] types = Reflector.obtainTypes(parameters);
+      Constructor<?> constructor = null;
+
+      for(final Constructor<?> cons : claz.getConstructors())
+      {
+         if(Reflector.typeMatch(types, cons.getParameterTypes()) == true)
+         {
+            constructor = cons;
+            break;
+         }
+      }
+
+      if(constructor == null)
+      {
+         throw new NoSuchMethodException(UtilText.concatenate("Constructor of ", className, "with given parameters not found ! : ", parameters));
+      }
+
+      return (OBJECT) constructor.newInstance(parameters);
+   }
+
+   /**
+    * Resolve a class
+    *
+    * @param className
+    *           Class name
+    * @return Resolved class
+    * @throws ClassNotFoundException
+    *            If class not know by the class manager
+    */
+   public Class<?> obtainClass(final String className) throws ClassNotFoundException
+   {
+      return this.classLoader.loadClass(className);
    }
 }

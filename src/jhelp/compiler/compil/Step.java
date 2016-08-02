@@ -3,8 +3,6 @@ package jhelp.compiler.compil;
 import java.util.ArrayList;
 import java.util.List;
 
-import jhelp.util.list.ArrayInt;
-
 /**
  * A progress step
  *
@@ -14,7 +12,7 @@ class Step
       implements Comparable<Step>
 {
    /** Current path */
-   private final ArrayInt           path;
+   private final List<StackInfo>    path;
    /** Stack status on step */
    private final List<StackElement> status;
    /** Index in instruction list */
@@ -30,12 +28,12 @@ class Step
     * @param path
     *           Current path
     */
-   public Step(final int index, final List<StackElement> status, final ArrayInt path)
+   public Step(final int index, final List<StackElement> status, final List<StackInfo> path)
    {
       this.index = index;
       this.status = new ArrayList<StackElement>();
       this.status.addAll(status);
-      this.path = new ArrayInt();
+      this.path = new ArrayList<StackInfo>();
       this.path.addAll(path);
    }
 
@@ -126,7 +124,7 @@ class Step
     * @param path
     *           Path where transfer this step path
     */
-   public void transferStatus(final List<StackElement> status, final ArrayInt path)
+   public void transferStatus(final List<StackElement> status, final List<StackInfo> path)
    {
       status.clear();
       status.addAll(this.status);

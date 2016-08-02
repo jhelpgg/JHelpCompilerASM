@@ -173,7 +173,7 @@ class MethodDescription
          parameter = this.parameters.get(i);
          parmetersType[i] = parameter.getType();
          parametersName[i] = parameter.getName();
-         compilerContext.addGetLocalReference(parametersName[i], parmetersType[i].getSignature(), lineNumber);
+         compilerContext.addGetLocalReference(parametersName[i], parmetersType[i].toString(), lineNumber);
       }
 
       // Here start the real local variable (not this nor parameter)

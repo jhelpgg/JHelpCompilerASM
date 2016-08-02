@@ -1,3 +1,13 @@
+/**
+ * <h1>License :</h1> <br>
+ * The following code is deliver as is. I take care that code compile and work, but I am not responsible about any damage it may
+ * cause.<br>
+ * You can use, modify, the code as your need for any usage. But you can't do any action that avoid me or other person use,
+ * modify this code. The code is free for usage and modification, you can't change that fact.<br>
+ * <br>
+ *
+ * @author JHelp
+ */
 package jhelp.compiler.compil;
 
 /**
@@ -223,22 +233,34 @@ public interface OpcodeConstants
     */
    public static final String CASTORE         = "CASTORE";
    /**
-    * Description : Check whether object is of given type<br>
+    * Description : Cast object to given type<br>
     * Syntax :<br>
-    * <code>CHECKCAST &lt;ClassName&gt;</code><br>
+    * <table border=1>
+    * <tr>
+    * <td>CHECKCAST &lt;ClassName&gt;</td>
+    * </tr>
+    * </table>
+    * <br>
     * Where :
     * <ul>
-    * <li>ClassName : THe complete class name (with the package) or the short version (Must be in imports, "java.lang" or same
+    * <li>ClassName : The complete class name (with the package) or the short version (Must be in imports, "java.lang" or same
     * package of the class)</li>
     * </ul>
     * <br>
-    * Operand stack : ..., objectref => ..., objectref<br>
+    * Operand stack :
+    * <table border=1>
+    * <tr>
+    * <td>..., objectref1 => ..., objectref2</td>
+    * </tr>
+    * </table>
+    * <br>
     * Where :
     * <ul>
-    * <li>objectref : reference to the object to check cast</li>
+    * <li>objectref1 : reference to the object to cast</li>
+    * <li>objectref2 : casted reference</li>
     * </ul>
     * <br>
-    * Details: Check result can be use with {@link #IFEQ} or {@link #IFNE}
+    * Details: The cast must be possible else a ClassCastException happen
     */
    public static final String CHECKCAST       = "CHECKCAST";
    /**
@@ -908,7 +930,7 @@ public interface OpcodeConstants
    /**
     * Description : Fetch field from object<br>
     * Syntax :<br>
-    * <code>GETFIELD &lt;fieldName&gt;</code><br>
+    * <code>GETFIELD &lt;fieldName/fieldAlias&gt;</code><br>
     * Where :
     * <ul>
     * <li>fieldName : Name of the field to get the value</li>
@@ -917,7 +939,7 @@ public interface OpcodeConstants
     * Operand stack : ..., objectref => ..., value<br>
     * Where :
     * <ul>
-    * <li>objectref : reference to the object. Must be reference to 'this'</li>
+    * <li>objectref : reference to the object</li>
     * <li>value : field value</li>
     * </ul>
     */
@@ -925,7 +947,7 @@ public interface OpcodeConstants
    /**
     * Description : Get static field from class<br>
     * Syntax :<br>
-    * <code>GETSTATIC  &lt;fieldName&gt;</code><br>
+    * <code>GETSTATIC  &lt;fieldName/fieldAlias&gt;</code><br>
     * Where :
     * <ul>
     * <li>fieldName : Name of the field to get the value</li>

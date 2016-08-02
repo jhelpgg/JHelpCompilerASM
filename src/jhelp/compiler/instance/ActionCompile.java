@@ -7,7 +7,6 @@ import com.sun.org.apache.bcel.internal.generic.ClassGen;
 
 import jhelp.compiler.compil.Compiler;
 import jhelp.compiler.compil.CompilerException;
-import jhelp.util.classLoader.JHelpClassLoader;
 import jhelp.util.io.ByteArray;
 import jhelp.util.list.foreach.ActionEach;
 
@@ -21,20 +20,20 @@ class ActionCompile
 {
    /** Listener to report compilation process information */
    private final ActionCompileListener actionCompileListener;
-   /** Class loader where store compiled class */
-   private final JHelpClassLoader      classLoader;
+   /** Class manager where store compiled class */
+   private final ClassManager          classManager;
 
    /**
     * Create a new instance of ActionCompile
     *
-    * @param classLoader
-    *           Class loader where store compiled class
+    * @param classManager
+    *           Class manager where store compiled class
     * @param actionCompileListener
     *           Listener to report compilation process information
     */
-   public ActionCompile(final JHelpClassLoader classLoader, final ActionCompileListener actionCompileListener)
+   public ActionCompile(final ClassManager classManager, final ActionCompileListener actionCompileListener)
    {
-      this.classLoader = classLoader;
+      this.classManager = classManager;
       this.actionCompileListener = actionCompileListener;
    }
 
@@ -59,9 +58,9 @@ class ActionCompile
          final ByteArray byteArray = new ByteArray();
          javaClass.dump(byteArray.getOutputStream());
 
-         synchronized(this.classLoader)
+         synchronized(this.classManager)
          {
-            this.classLoader.addClass(javaClass.getClassName(), byteArray.toArray());
+            this.classManager.addClass(javaClass.getClassName(), byteArray.toArray());
          }
 
          synchronized(this.actionCompileListener)

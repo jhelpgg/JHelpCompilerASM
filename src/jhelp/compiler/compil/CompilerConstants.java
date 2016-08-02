@@ -39,6 +39,11 @@ public interface CompilerConstants
     */
    public static final String FIELD              = "field";
    /**
+    * Declare a reference to an external field:<br>
+    * <code>field_reference &lt;className&gt; &lt;type&gt; &lt;name&gt; &lt;alias&gt;</code>
+    */
+   public static final String FIELD_REFERENCE    = "field_reference";
+   /**
     * Add interface to implements:<br>
     * <code>implements &lt;ClassName&gt;</code>
     */

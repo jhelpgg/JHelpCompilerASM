@@ -24,7 +24,7 @@ public class CompilerException
     */
    public CompilerException(final int lineNumber, final String message)
    {
-      super(UtilText.concatenate(message, " Near line ", lineNumber));
+      super(UtilText.concatenate(message, "\nError line ", lineNumber));
       this.lineNumber = lineNumber;
    }
 

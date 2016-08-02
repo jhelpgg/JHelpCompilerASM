@@ -84,6 +84,8 @@ public class TestClassManager
          {
             operation = classManager.newInstance(className);
             Debug.println(DebugLevel.INFORMATION, className, ".calculate(8,6)=", operation.calculate(8, 6));
+            Debug.println(DebugLevel.INFORMATION, className, ".calculate(8,2)=", operation.calculate(8, 2));
+            Debug.println(DebugLevel.INFORMATION, className, ".calculate(8,0)=", operation.calculate(8, 0));
          }
          catch(final Exception exception)
          {

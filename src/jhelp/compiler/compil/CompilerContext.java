@@ -4,8 +4,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.sun.org.apache.bcel.internal.generic.ArrayType;
+import com.sun.org.apache.bcel.internal.generic.BasicType;
 import com.sun.org.apache.bcel.internal.generic.BranchHandle;
 import com.sun.org.apache.bcel.internal.generic.ClassGen;
 import com.sun.org.apache.bcel.internal.generic.ConstantPoolGen;
@@ -18,6 +21,7 @@ import com.sun.org.apache.bcel.internal.generic.Type;
 
 import jhelp.util.list.Pair;
 import jhelp.util.reflection.Reflector;
+import jhelp.util.text.StringCutter;
 import jhelp.util.text.UtilText;
 
 /**
@@ -35,6 +39,16 @@ import jhelp.util.text.UtilText;
 class CompilerContext
       implements CompilerConstants
 {
+   /**
+    * Pattern for signature like : <br>
+    * <code>(int,boolean,Object,java.util.List):String</code><br>
+    * <ol>
+    * <li>Group 1 : Parameter list</li>
+    * <li>Group 2 : If exists => Just convenient for capture return type if exists</li>
+    * <li>Group 3 : If exists => return type</li>
+    * </ol>
+    */
+   private static final Pattern                 PATTERN_SIGNATURE_JAVA = Pattern.compile("\\(([a-zA-Z0-9_.,]*)\\)(:([a-zA-Z0-9_.]+))?");
    /** List of instruction branches to solve destination target later. */
    private final List<BranchInformation>        branches;
    /** Class actually compiled */
@@ -65,6 +79,7 @@ class CompilerContext
    private String                               parent;
    /** "Switch" instructions to resolve later */
    private final List<SelectInformation>        switches;
+
    /** Resolved types */
    private final Map<String, Type>              types;
 
@@ -198,7 +213,7 @@ class CompilerContext
       {
          if((value.charAt(0) == '"') && (value.charAt(length - 1) == '"'))
          {
-            return this.constantPoolGen.addUtf8(UtilText.interpretAntiSlash(value.substring(1, length - 1)));
+            return this.constantPoolGen.addString(UtilText.interpretAntiSlash(value.substring(1, length - 1)));
          }
 
          if(length > 2)
@@ -319,7 +334,7 @@ class CompilerContext
 
       if(fieldInformation != null)
       {
-         throw new CompilerException(lineNumber, "Filed " + name + " already defined at " + fieldInformation.getLineDeclaration());
+         throw new CompilerException(lineNumber, "Filed with alias/name " + name + " already defined at " + fieldInformation.getLineDeclaration());
       }
 
       final Type type = this.stringToType(typeName);
@@ -327,6 +342,44 @@ class CompilerContext
       this.classGen.addField(fieldGen.getField());
       final int reference = this.constantPoolGen.addFieldref(this.className, name, type.getSignature());
       this.fields.put(name, new FieldInformation(name, type, reference, lineNumber));
+   }
+
+   /**
+    * Add external field reference to constant pool
+    *
+    * @param className
+    *           Class name where find the field
+    * @param typeName
+    *           Field type
+    * @param name
+    *           Filed name in object
+    * @param alias
+    *           Alias give to the reference
+    * @param lineNumber
+    *           Declaration line number
+    * @throws CompilerException
+    *            If field with same name/alias already exists or class name not valid
+    */
+   public void addFieldReference(final String className, final String typeName, final String name, final String alias, final int lineNumber)
+         throws CompilerException
+   {
+      final FieldInformation fieldInformation = this.fields.get(alias);
+
+      if(fieldInformation != null)
+      {
+         throw new CompilerException(lineNumber, "Filed with alias/name " + alias + " already defined at " + fieldInformation.getLineDeclaration());
+      }
+
+      final Type type = this.stringToType(typeName);
+      final Type classReference = this.stringToType(className);
+
+      if((classReference instanceof ObjectType) == false)
+      {
+         throw new CompilerException(lineNumber, className + " not a class reference !");
+      }
+
+      final int reference = this.constantPoolGen.addFieldref(classReference.toString(), name, type.getSignature());
+      this.fields.put(alias, new FieldInformation(alias, name, classReference.toString(), type, reference, lineNumber));
    }
 
    /**
@@ -463,14 +516,75 @@ class CompilerContext
     * @param method
     *           Method name
     * @param signature
-    *           Signature in form like : ()V , (I,I)J, (Ljava.lang.String;)V, ...
+    *           Signature in form like : ()V , (I,I)J, (Ljava.lang.String;)V, ... OR (int, char, String):List
     * @param lineNumber
     *           Line number of declaration
     * @return Method reference
+    * @throws CompilerException
+    *            If class name not valid or method signature not valid
     */
-   public int addMethodReference(final String className, final String method, final String signature, final int lineNumber)
+   public int addMethodReference(final String className, final String method, final String signature, final int lineNumber) throws CompilerException
    {
-      return this.constantPoolGen.addMethodref(className, method, signature);
+      final Type type = this.stringToType(className);
+
+      if((type instanceof ObjectType) == false)
+      {
+         throw new CompilerException(lineNumber, "Not a reference to a class : " + className);
+      }
+
+      String goodSignature = signature.replace('.', '/');
+
+      try
+      {
+         Type.getArgumentTypes(goodSignature);
+         Type.getReturnType(goodSignature);
+      }
+      catch(final Exception exception)
+      {
+         final Matcher matcher = CompilerContext.PATTERN_SIGNATURE_JAVA.matcher(signature);
+
+         if(matcher.matches() == false)
+         {
+            throw new CompilerException(lineNumber, "Not valid method signature :\n" + signature);
+         }
+
+         Type returnType = Type.VOID;
+         final List<Type> parameters = new ArrayList<Type>();
+         final int count = matcher.groupCount();
+
+         if(count == 0)
+         {
+            throw new CompilerException(lineNumber, "Not valid method signature :\n" + signature);
+         }
+
+         final String parametersTypeName = matcher.group(1);
+
+         if((parametersTypeName != null) && (parametersTypeName.length() > 0))
+         {
+            final StringCutter stringCutter = new StringCutter(parametersTypeName, ',');
+            String typeName = stringCutter.next();
+
+            while(typeName != null)
+            {
+               parameters.add(this.stringToType(typeName));
+               typeName = stringCutter.next();
+            }
+         }
+
+         if(count >= 3)
+         {
+            final String returnTypeName = matcher.group(3);
+
+            if((returnTypeName != null) && (returnTypeName.length() > 0))
+            {
+               returnType = this.stringToType(returnTypeName);
+            }
+         }
+
+         goodSignature = Type.getMethodSignature(returnType, parameters.toArray(new Type[parameters.size()]));
+      }
+
+      return this.constantPoolGen.addMethodref(type.toString(), method, goodSignature);
    }
 
    /**
@@ -510,6 +624,108 @@ class CompilerContext
       }
 
       throw new CompilerException(lineNumber, typeName + " not a reference type !");
+   }
+
+   /**
+    * Check if a local reference have the good type to be use with the instruction
+    *
+    * @param name
+    *           Local reference name
+    * @param type
+    *           Base type to use with instruction (For not primitive use Type.OBJECT)
+    * @param isArray
+    *           Indicates if the waiting is an array of base type
+    * @param nullAllowed
+    *           Indicates if null is allowed as value
+    * @param lineNumber
+    *           Instruction line number
+    * @throws CompilerException
+    *            If check failed
+    */
+   public void checkType(final String name, final Type type, final boolean isArray, final boolean nullAllowed, final int lineNumber) throws CompilerException
+   {
+      final String realName = type + (isArray == true
+            ? "[]"
+            : "");
+      Type parameterType = this.getLocalReferenceType(name);
+
+      if(parameterType == null)
+      {
+         throw new CompilerException(lineNumber, "Reference '" + name + "' not found !");
+      }
+
+      if(parameterType instanceof ArrayType)
+      {
+         if(isArray == false)
+         {
+            throw new CompilerException(lineNumber, "Reference '" + name + "' is a " + parameterType + " not compatible with " + realName);
+         }
+
+         parameterType = ((ArrayType) parameterType).getBasicType();
+      }
+      else if(isArray == true)
+      {
+         if(parameterType.equals(Type.NULL) == true)
+         {
+            if(nullAllowed == false)
+            {
+               throw new CompilerException(lineNumber, "Null value forbidden !");
+            }
+
+            return;
+         }
+
+         throw new CompilerException(lineNumber, "Reference '" + name + "' is a " + parameterType + " not compatible with " + realName);
+      }
+
+      if(parameterType.equals(type) == true)
+      {
+         return;
+      }
+
+      if(parameterType.equals(Type.NULL) == true)
+      {
+         if(nullAllowed == false)
+         {
+            throw new CompilerException(lineNumber, "Null value forbidden !");
+         }
+
+         if(type == Type.OBJECT)
+         {
+            return;
+         }
+
+         throw new CompilerException(lineNumber, "Reference '" + name + "' is a " + parameterType + " not compatible with " + realName);
+      }
+
+      if(parameterType instanceof ObjectType)
+      {
+         if(type == Type.OBJECT)
+         {
+            return;
+         }
+
+         throw new CompilerException(lineNumber, "Reference '" + name + "' is a " + parameterType + " not compatible with " + realName);
+      }
+
+      if((type instanceof BasicType) == false)
+      {
+         throw new CompilerException(lineNumber, "Reference '" + name + "' is a " + parameterType + " not compatible with " + realName);
+      }
+
+      if(isArray == true)
+      {
+         throw new CompilerException(lineNumber, "Reference '" + name + "' is a " + parameterType + " not compatible with " + realName);
+      }
+
+      if(((type == Type.BOOLEAN) || (type == Type.BYTE) || (type == Type.CHAR) || (type == Type.INT) || (type == Type.SHORT))
+            && ((parameterType == Type.BOOLEAN) || (parameterType == Type.BYTE) || (parameterType == Type.CHAR) || (parameterType == Type.INT)
+                  || (parameterType == Type.SHORT)))
+      {
+         return;
+      }
+
+      throw new CompilerException(lineNumber, "Reference '" + name + "' is a " + parameterType + " not compatible with " + realName);
    }
 
    /**
@@ -810,6 +1026,28 @@ class CompilerContext
    public int getLocalReference(final String name, final int lineNumber) throws CompilerException
    {
       return this.addGetReference(name, null, lineNumber, this.localeVariables);
+   }
+
+   /**
+    * Obtain the type of a local reference
+    *
+    * @param name
+    *           Local reference name
+    * @return Local reference type OR null if local reference not found
+    */
+   public Type getLocalReferenceType(final String name)
+   {
+      final int size = this.localeVariables.size();
+
+      for(int i = 0; i < size; i++)
+      {
+         if(name.equals(this.localeVariables.get(i).getName()) == true)
+         {
+            return this.localeVariables.get(i).getType();
+         }
+      }
+
+      return null;
    }
 
    /**

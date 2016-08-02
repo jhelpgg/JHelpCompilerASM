@@ -133,6 +133,11 @@ class CodeLine
             throw new CompilerException(this.lineNumber, "Miss parameters in VAR !");
          }
 
+         if("this".equals(this.parameter2) == true)
+         {
+            throw new CompilerException(this.lineNumber, "Can't create variable named 'this' !");
+         }
+
          compilerContext.addGetLocalReference(this.parameter2, this.parameter1, this.lineNumber);
          return null;
       }
@@ -178,6 +183,7 @@ class CodeLine
             throw new CompilerException(this.lineNumber, "Miss parameter name !");
          }
 
+         compilerContext.checkType(this.parameter1, Type.OBJECT, false, true, this.lineNumber);
          instruction = new com.sun.org.apache.bcel.internal.generic.ALOAD(compilerContext.getLocalReference(this.parameter1, this.lineNumber));
       }
       // ANEWARRAY <Type>
@@ -211,6 +217,7 @@ class CodeLine
             throw new CompilerException(this.lineNumber, "Can't store in 'this' !");
          }
 
+         compilerContext.checkType(this.parameter1, Type.OBJECT, false, false, this.lineNumber);
          instruction = new com.sun.org.apache.bcel.internal.generic.ASTORE(compilerContext.getLocalReference(this.parameter1, this.lineNumber));
       }
       else if(OpcodeConstants.ATHROW.equals(this.instruction) == true)
@@ -328,7 +335,7 @@ class CodeLine
       {
          instruction = new com.sun.org.apache.bcel.internal.generic.DDIV();
       }
-      // DLOAD this|<methodParameter>|<localVariable>
+      // DLOAD <methodParameter>|<localVariable>
       else if(OpcodeConstants.DLOAD.equals(this.instruction) == true)
       {
          if(this.parameter1 == null)
@@ -336,6 +343,12 @@ class CodeLine
             throw new CompilerException(this.lineNumber, "Miss the local variable to load !");
          }
 
+         if("this".equals(this.parameter1) == true)
+         {
+            throw new CompilerException(this.lineNumber, "'this' is the reference to this object, not a double !");
+         }
+
+         compilerContext.checkType(this.parameter1, Type.DOUBLE, false, false, this.lineNumber);
          instruction = new com.sun.org.apache.bcel.internal.generic.DLOAD(compilerContext.getLocalReference(this.parameter1, this.lineNumber));
       }
       else if(OpcodeConstants.DMUL.equals(this.instruction) == true)
@@ -367,6 +380,7 @@ class CodeLine
             throw new CompilerException(this.lineNumber, "Can't store in 'this' !");
          }
 
+         compilerContext.checkType(this.parameter1, Type.DOUBLE, false, false, this.lineNumber);
          instruction = new com.sun.org.apache.bcel.internal.generic.DSTORE(compilerContext.getLocalReference(this.parameter1, this.lineNumber));
       }
       else if(OpcodeConstants.DSUB.equals(this.instruction) == true)
@@ -465,7 +479,7 @@ class CodeLine
       {
          instruction = new com.sun.org.apache.bcel.internal.generic.FDIV();
       }
-      // FLOAD this|<methodParameter>|<localVariable>
+      // FLOAD <methodParameter>|<localVariable>
       else if(OpcodeConstants.FLOAD.equals(this.instruction) == true)
       {
          if(this.parameter1 == null)
@@ -473,6 +487,12 @@ class CodeLine
             throw new CompilerException(this.lineNumber, "Miss parameter name !");
          }
 
+         if("this".equals(this.parameter1) == true)
+         {
+            throw new CompilerException(this.lineNumber, "'this' is the reference to this object, not a float !");
+         }
+
+         compilerContext.checkType(this.parameter1, Type.FLOAT, false, false, this.lineNumber);
          instruction = new com.sun.org.apache.bcel.internal.generic.FLOAD(compilerContext.getLocalReference(this.parameter1, this.lineNumber));
       }
       else if(OpcodeConstants.FMUL.equals(this.instruction) == true)
@@ -504,6 +524,7 @@ class CodeLine
             throw new CompilerException(this.lineNumber, "Can't store in 'this' !");
          }
 
+         compilerContext.checkType(this.parameter1, Type.FLOAT, false, false, this.lineNumber);
          instruction = new com.sun.org.apache.bcel.internal.generic.FSTORE(compilerContext.getLocalReference(this.parameter1, this.lineNumber));
       }
       else if(OpcodeConstants.FSUB.equals(this.instruction) == true)
@@ -803,6 +824,7 @@ class CodeLine
 
          try
          {
+            compilerContext.checkType(this.parameter1, Type.INT, false, false, this.lineNumber);
             instruction = new com.sun.org.apache.bcel.internal.generic.IINC(compilerContext.getLocalReference(this.parameter1, this.lineNumber),
                   Integer.parseInt(this.parameter2));
          }
@@ -811,7 +833,7 @@ class CodeLine
             throw new CompilerException(this.lineNumber, "Invalid parameters !");
          }
       }
-      // ILOAD this|<methodParameter>|<localVariable>
+      // ILOAD <methodParameter>|<localVariable>
       else if(OpcodeConstants.ILOAD.equals(this.instruction) == true)
       {
          if(this.parameter1 == null)
@@ -819,6 +841,12 @@ class CodeLine
             throw new CompilerException(this.lineNumber, "Miss parameter name !");
          }
 
+         if("this".equals(this.parameter1) == true)
+         {
+            throw new CompilerException(this.lineNumber, "'this' is the reference to this object, not a int !");
+         }
+
+         compilerContext.checkType(this.parameter1, Type.INT, false, false, this.lineNumber);
          instruction = new com.sun.org.apache.bcel.internal.generic.ILOAD(compilerContext.getLocalReference(this.parameter1, this.lineNumber));
       }
       else if(OpcodeConstants.IMPDEP1.equals(this.instruction) == true)
@@ -928,6 +956,7 @@ class CodeLine
             throw new CompilerException(this.lineNumber, "Can't store in 'this' !");
          }
 
+         compilerContext.checkType(this.parameter1, Type.INT, false, false, this.lineNumber);
          instruction = new com.sun.org.apache.bcel.internal.generic.ISTORE(compilerContext.getLocalReference(this.parameter1, this.lineNumber));
       }
       else if(OpcodeConstants.ISUB.equals(this.instruction) == true)
@@ -1047,7 +1076,7 @@ class CodeLine
       {
          instruction = new com.sun.org.apache.bcel.internal.generic.LDIV();
       }
-      // LLOAD this|<methodParameter>|<localVariable>
+      // LLOAD <methodParameter>|<localVariable>
       else if(OpcodeConstants.LLOAD.equals(this.instruction) == true)
       {
          if(this.parameter1 == null)
@@ -1055,6 +1084,12 @@ class CodeLine
             throw new CompilerException(this.lineNumber, "Miss the local reference !");
          }
 
+         if("this".equals(this.parameter1) == true)
+         {
+            throw new CompilerException(this.lineNumber, "'this' is the reference to this object, not a long !");
+         }
+
+         compilerContext.checkType(this.parameter1, Type.LONG, false, false, this.lineNumber);
          instruction = new com.sun.org.apache.bcel.internal.generic.LLOAD(compilerContext.getLocalReference(this.parameter1, this.lineNumber));
       }
       else if(OpcodeConstants.LMUL.equals(this.instruction) == true)
@@ -1103,6 +1138,7 @@ class CodeLine
             throw new CompilerException(this.lineNumber, "Can't store in 'this' !");
          }
 
+         compilerContext.checkType(this.parameter1, Type.LONG, false, false, this.lineNumber);
          instruction = new com.sun.org.apache.bcel.internal.generic.LSTORE(compilerContext.getLocalReference(this.parameter1, this.lineNumber));
       }
       else if(OpcodeConstants.LSUB.equals(this.instruction) == true)
@@ -1214,7 +1250,7 @@ class CodeLine
 
          instruction = new com.sun.org.apache.bcel.internal.generic.PUTSTATIC(compilerContext.getField(this.parameter1, this.lineNumber).getReference());
       }
-      // RET this|<methodParameter>|<localVariable>
+      // RET <methodParameter>|<localVariable>
       else if(OpcodeConstants.RET.equals(this.instruction) == true)
       {
          if(this.parameter1 == null)
@@ -1222,6 +1258,12 @@ class CodeLine
             throw new CompilerException(this.lineNumber, "Miss the local variable name !");
          }
 
+         if(this.parameter1.equals("this") == true)
+         {
+            throw new CompilerException(this.lineNumber, "Don't use 'this' with RET !");
+         }
+
+         compilerContext.checkType(this.parameter1, Type.OBJECT, false, false, this.lineNumber);
          instruction = new com.sun.org.apache.bcel.internal.generic.RET(compilerContext.getLocalReference(this.parameter1, this.lineNumber));
       }
       else if(OpcodeConstants.RETURN.equals(this.instruction) == true)
