@@ -269,7 +269,7 @@ class CodeLine
             throw new CompilerException(this.lineNumber, "Miss the type to check the cast !");
          }
 
-         instruction = new com.sun.org.apache.bcel.internal.generic.CHECKCAST(compilerContext.addClassReference(this.parameter1, this.lineNumber));
+         instruction = new com.sun.org.apache.bcel.internal.generic.CHECKCAST(compilerContext.addTypeReference(this.parameter1, this.lineNumber));
       }
       else if(OpcodeConstants.D2F.equals(this.instruction) == true)
       {
@@ -1171,8 +1171,9 @@ class CodeLine
 
          try
          {
-            instruction = new com.sun.org.apache.bcel.internal.generic.MULTIANEWARRAY(compilerContext.addTypeReference(this.parameter1, this.lineNumber),
-                  Short.parseShort(this.parameter2));
+            final short dimensions = Short.parseShort(this.parameter2);
+            instruction = new com.sun.org.apache.bcel.internal.generic.MULTIANEWARRAY(
+                  compilerContext.addArrayReference(this.parameter1, dimensions, this.lineNumber), dimensions);
          }
          catch(final Exception exception)
          {

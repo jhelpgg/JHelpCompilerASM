@@ -2026,7 +2026,7 @@ public interface OpcodeConstants
     * Where :
     * <ul>
     * <li>value1 : first long</li>
-    * <li>value2 : second long</li>
+    * <li>value2 : second int</li>
     * <li>result : shift left result (long)</li>
     * </ul>
     */
@@ -2039,7 +2039,7 @@ public interface OpcodeConstants
     * Where :
     * <ul>
     * <li>value1 : first long</li>
-    * <li>value2 : second long</li>
+    * <li>value2 : second int</li>
     * <li>result : shift right result (long)</li>
     * </ul>
     */
@@ -2080,7 +2080,7 @@ public interface OpcodeConstants
     * Where :
     * <ul>
     * <li>value1 : first long</li>
-    * <li>value2 : second long</li>
+    * <li>value2 : second int</li>
     * <li>result : shift right result (long)</li>
     * </ul>
     */
@@ -2222,7 +2222,7 @@ public interface OpcodeConstants
     */
    public static final String POP2            = "POP2";
    /**
-    * Description : Convenient instruction for push a value (It choose the good the good instruction for push the value)<br>
+    * Description : Convenient instruction for push a value (It choose the good instruction for push the value)<br>
     * Syntax :<br>
     * <code>PUSH  &lt;constantValue&gt;</code><br>
     * Where :

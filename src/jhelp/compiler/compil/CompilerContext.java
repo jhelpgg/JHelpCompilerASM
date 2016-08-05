@@ -134,6 +134,11 @@ class CompilerContext
          {
             this.constantPoolGen.addClass((ObjectType) type);
          }
+
+         if(type instanceof ArrayType)
+         {
+            this.constantPoolGen.addArrayClass((ArrayType) type);
+         }
       }
 
       final int size = reference.size();
@@ -153,7 +158,34 @@ class CompilerContext
 
       final Parameter parameter = new Parameter(name, type);
       reference.add(parameter);
+
+      if((Type.DOUBLE.equals(type) == true) || (Type.LONG.equals(type) == true))
+      {
+         // Since take 2 index, we add a "space" after them to keep our reference accurate
+         reference.add(Parameter.SPACE);
+      }
+
       return size;
+   }
+
+   /**
+    * Add a reference array
+    *
+    * @param typeName
+    *           Array base element type
+    * @param dimensions
+    *           Number of dimensions
+    * @param lineNumber
+    *           Line number in code
+    * @return Created reference
+    * @throws CompilerException
+    *            On issue while creation
+    */
+   public int addArrayReference(final String typeName, final int dimensions, final int lineNumber) throws CompilerException
+   {
+      final Type type = this.stringToType(typeName);
+      final ArrayType arrayType = new ArrayType(type, dimensions);
+      return this.constantPoolGen.addArrayClass(arrayType);
    }
 
    /**
@@ -656,6 +688,11 @@ class CompilerContext
 
       if(parameterType instanceof ArrayType)
       {
+         if(type.equals(Type.OBJECT) == true)
+         {
+            return;
+         }
+
          if(isArray == false)
          {
             throw new CompilerException(lineNumber, "Reference '" + name + "' is a " + parameterType + " not compatible with " + realName);
@@ -853,7 +890,7 @@ class CompilerContext
          methodGen.addLineNumber(line.element1, line.element2);
       }
 
-      final StackInspector stackInspector = new StackInspector(instructionList, linesTable);
+      final StackInspector stackInspector = new StackInspector(instructionList, linesTable, this);
       stackInspector.checkStack(this.constantPoolGen);
 
       // Create and add the method to the class
@@ -1051,6 +1088,18 @@ class CompilerContext
    }
 
    /**
+    * Obtain a parameter
+    *
+    * @param index
+    *           Parameter index
+    * @return The parameter
+    */
+   public Parameter getParameter(final int index)
+   {
+      return this.localeVariables.get(index);
+   }
+
+   /**
     * Initialize the context to be ready to compile a new class
     */
    public void initialize()
@@ -1187,6 +1236,12 @@ class CompilerContext
     */
    public Type stringToType(final String string)
    {
+      if(string.endsWith("[]") == true)
+      {
+         final Type base = this.stringToType(string.substring(0, string.length() - 2));
+         return new ArrayType(base, 1);
+      }
+
       // Test if it is a primitive or well known type
       if(Reflector.PRIMITIVE_BOOLEAN.equals(string) == true)
       {

@@ -61,7 +61,7 @@ public class StackElement
 
       if(this.type instanceof ArrayType)
       {
-         return (type == Type.NULL) || (type instanceof ArrayType);
+         return (type == Type.NULL) || (type instanceof ObjectType) || (type instanceof ArrayType);
       }
 
       return false;

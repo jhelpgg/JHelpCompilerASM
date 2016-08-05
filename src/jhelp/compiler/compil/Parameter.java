@@ -9,10 +9,13 @@ import com.sun.org.apache.bcel.internal.generic.Type;
  */
 class Parameter
 {
+   /** Special parameter for make an empty space due double and long take 2 places */
+   public static final Parameter SPACE = new Parameter("", Type.UNKNOWN);
+
    /** Name */
-   private final String name;
+   private final String          name;
    /** Type */
-   private final Type   type;
+   private final Type            type;
 
    /**
     * Create a new instance of Parameter

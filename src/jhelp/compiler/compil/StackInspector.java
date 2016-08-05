@@ -6,10 +6,10 @@ import java.util.Stack;
 import java.util.TreeSet;
 
 import com.sun.org.apache.bcel.internal.Constants;
-import com.sun.org.apache.bcel.internal.generic.AALOAD;
 import com.sun.org.apache.bcel.internal.generic.ALOAD;
 import com.sun.org.apache.bcel.internal.generic.ANEWARRAY;
 import com.sun.org.apache.bcel.internal.generic.ArrayType;
+import com.sun.org.apache.bcel.internal.generic.CHECKCAST;
 import com.sun.org.apache.bcel.internal.generic.ConstantPoolGen;
 import com.sun.org.apache.bcel.internal.generic.GETFIELD;
 import com.sun.org.apache.bcel.internal.generic.GETSTATIC;
@@ -62,6 +62,8 @@ import jhelp.util.text.UtilText;
  */
 class StackInspector
 {
+   /** Compiler context */
+   private final CompilerContext                        compilerContext;
    /** List of instructions to inspect */
    private final InstructionList                        instructionList;
    /** Lines table */
@@ -78,9 +80,12 @@ class StackInspector
     *           List of instructions to inspect
     * @param linesTable
     *           Lines table
+    * @param compilerContext
+    *           Compiler context
     */
-   public StackInspector(final InstructionList instructionList, final List<Pair<InstructionHandle, Integer>> linesTable)
+   public StackInspector(final InstructionList instructionList, final List<Pair<InstructionHandle, Integer>> linesTable, final CompilerContext compilerContext)
    {
+      this.compilerContext = compilerContext;
       this.instructionList = instructionList;
       this.linesTable = linesTable;
       this.stack = new ArrayList<StackElement>();
@@ -231,6 +236,7 @@ class StackInspector
       boolean condition;
       StackElement type1, type2, type3, type4;
       StackInfo stackInfo;
+      Type ret;
 
       while(stackExecution.isEmpty() == false)
       {
@@ -346,7 +352,7 @@ class StackInspector
             break;
             // ... => ..., value (objectref)
             case Constants.ALOAD:
-               this.push(((ALOAD) instruction).getType(constantPool));
+               this.push(this.compilerContext.getParameter(((ALOAD) instruction).getIndex()).getType());
             break;
             // ... => ..., value (int)
             case Constants.ILOAD_0:
@@ -414,19 +420,19 @@ class StackInspector
             break;
             // ... => ..., value (objectref)
             case Constants.ALOAD_0:
-               this.push(((ALOAD) instruction).getType(constantPool));
+               this.push(this.compilerContext.getParameter(((ALOAD) instruction).getIndex()).getType());
             break;
             // ... => ..., value (objectref)
             case Constants.ALOAD_1:
-               this.push(((ALOAD) instruction).getType(constantPool));
+               this.push(this.compilerContext.getParameter(((ALOAD) instruction).getIndex()).getType());
             break;
             // ... => ..., value (objectref)
             case Constants.ALOAD_2:
-               this.push(((ALOAD) instruction).getType(constantPool));
+               this.push(this.compilerContext.getParameter(((ALOAD) instruction).getIndex()).getType());
             break;
             // ... => ..., value (objectref)
             case Constants.ALOAD_3:
-               this.push(((ALOAD) instruction).getType(constantPool));
+               this.push(this.compilerContext.getParameter(((ALOAD) instruction).getIndex()).getType());
             break;
             // ..., arrayref, index (int) => ..., value (int)
             case Constants.IALOAD:
@@ -485,8 +491,9 @@ class StackInspector
                   this.throwException(instructionHandle, "AALOAD required stack end with 'arrayref' 'int'");
                }
 
+               type1 = this.stack.get(size - 2);
                this.pop(2);
-               this.push(((AALOAD) instruction).getType(constantPool));
+               this.push(((ArrayType) type1.getType()).getElementType());
             break;
             // ..., arrayref, index (int) => ..., value (int)
             case Constants.BALOAD:
@@ -1424,9 +1431,9 @@ class StackInspector
             case Constants.LSHL:
                if((size < 2) || //
                      (this.stack.get(size - 2).isLong() == false) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (this.stack.get(size - 1).isInt() == false))
                {
-                  this.throwException(instructionHandle, "LSHL need stack end with : long long");
+                  this.throwException(instructionHandle, "LSHL need stack end with : long int");
                }
 
                this.pop(1);
@@ -1446,9 +1453,9 @@ class StackInspector
             case Constants.LSHR:
                if((size < 2) || //
                      (this.stack.get(size - 2).isLong() == false) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (this.stack.get(size - 1).isInt() == false))
                {
-                  this.throwException(instructionHandle, "LSHR need stack end with : long long");
+                  this.throwException(instructionHandle, "LSHR need stack end with : long int");
                }
 
                this.pop(1);
@@ -1468,9 +1475,9 @@ class StackInspector
             case Constants.LUSHR:
                if((size < 2) || //
                      (this.stack.get(size - 2).isLong() == false) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (this.stack.get(size - 1).isInt() == false))
                {
-                  this.throwException(instructionHandle, "LUSHR need stack end with : long long");
+                  this.throwException(instructionHandle, "LUSHR need stack end with : long int");
                }
 
                this.pop(1);
@@ -2230,6 +2237,12 @@ class StackInspector
                }
 
                this.pop(types.length + 1);
+               ret = ((INVOKEVIRTUAL) instruction).getReturnType(constantPool);
+
+               if(Type.VOID.equals(ret) == false)
+               {
+                  this.push(ret);
+               }
             break;
             // ..., objectref, [arg1(?), [arg2(?) ...]] => ...
             case Constants.INVOKESPECIAL:
@@ -2251,12 +2264,24 @@ class StackInspector
                }
 
                this.pop(types.length + 1);
+               ret = ((INVOKESPECIAL) instruction).getReturnType(constantPool);
+
+               if(Type.VOID.equals(ret) == false)
+               {
+                  this.push(ret);
+               }
             break;
             // ..., [arg1(?), [arg2(?) ...]] => ...
             case Constants.INVOKESTATIC:
                types = ((INVOKESTATIC) instruction).getArgumentTypes(constantPool);
                this.checkTypes(instructionHandle, types);
                this.pop(types.length);
+               ret = ((INVOKESTATIC) instruction).getReturnType(constantPool);
+
+               if(Type.VOID.equals(ret) == false)
+               {
+                  this.push(ret);
+               }
             break;
             // ..., objectref, [arg1(?), [arg2(?) ...]] => ...
             case Constants.INVOKEINTERFACE:
@@ -2278,6 +2303,12 @@ class StackInspector
                }
 
                this.pop(types.length + 1);
+               ret = ((INVOKEINTERFACE) instruction).getReturnType(constantPool);
+
+               if(Type.VOID.equals(ret) == false)
+               {
+                  this.push(ret);
+               }
             break;
             // .. => ..., objectref
             case Constants.NEW:
@@ -2333,6 +2364,8 @@ class StackInspector
                {
                   this.throwException(instructionHandle, "CHECKCAST need stack end with : objectref");
                }
+               this.pop(1);
+               this.push(((CHECKCAST) instruction).getType(constantPool));
             break;
             // .., objectref => ..., result(int)
             case Constants.INSTANCEOF:
