@@ -165,7 +165,7 @@ public class Compiler
 
    /**
     * Parse a line.<br>
-    * Line is sure not be a comment, blank, following comments removed and trim
+    * Line is sure : not be a comment, not blank, following comments removed and trim
     *
     * @param line
     *           Line

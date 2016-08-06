@@ -881,7 +881,11 @@ class CompilerContext
       for(int i = this.indexMarkReference; i < size; i++)
       {
          parameter = this.localeVariables.get(i);
-         methodGen.addLocalVariable(parameter.getName(), parameter.getType(), start, end);
+
+         if(parameter != Parameter.SPACE)
+         {
+            methodGen.addLocalVariable(parameter.getName(), parameter.getType(), start, end);
+         }
       }
 
       // Add line code reference
