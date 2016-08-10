@@ -397,7 +397,7 @@ public class Compiler
       this.compilerContext.initialize();
       this.methodDescription = null;
       this.startBlockLineNumber = -1;
-
+      int mutlineCommentStart = -1;
       int lineNumber = 0;
 
       try
@@ -428,6 +428,28 @@ public class Compiler
                if(index > 0)
                {
                   line = line.substring(0, index);
+               }
+            }
+
+            if(mutlineCommentStart < 0)
+            {
+               mutlineCommentStart = UtilText.indexOfIgnoreStrings(line, "/*", 0, UtilText.DEFAULT_STRING_LIMITERS);
+            }
+
+            while(mutlineCommentStart >= 0)
+            {
+               index = UtilText.indexOfIgnoreStrings(line, "*/", mutlineCommentStart, UtilText.DEFAULT_STRING_LIMITERS);
+
+               if(index >= 0)
+               {
+                  line = UtilText.concatenate(line.substring(0, mutlineCommentStart), line.substring(index + 2));
+                  mutlineCommentStart = UtilText.indexOfIgnoreStrings(line, "/*", 0, UtilText.DEFAULT_STRING_LIMITERS);
+               }
+               else
+               {
+                  line = line.substring(0, mutlineCommentStart);
+                  mutlineCommentStart = 0;
+                  break;
                }
             }
 
