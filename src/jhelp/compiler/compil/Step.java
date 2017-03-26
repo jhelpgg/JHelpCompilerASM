@@ -78,7 +78,7 @@ class Step
          return false;
       }
 
-      if(Step.class.equals(object.getClass()) == false)
+      if(!Step.class.equals(object.getClass()))
       {
          return false;
       }

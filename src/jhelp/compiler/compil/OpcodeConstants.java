@@ -984,8 +984,8 @@ public interface OpcodeConstants
     * </ul>
     * Operand stack : No change<br>
     * Details: Be sure the label is declare somewhere in the method with {@link #Z_LABEL}<br>
-    * This instruction designed for big jump, but {@link #GOTO} here auto transform in {@link #GOTO_W} if jump is to big, so use
-    * {@link #GOTO} and let compiler manage by it self
+    * This instruction designed for big jump, but {@link #GOTO} here auto transform in {@link #GOTO_W} if jump is too big, so
+    * use {@link #GOTO} and let compiler manage by it self
     */
    public static final String GOTO_W          = "GOTO_W";
    /**
@@ -2407,6 +2407,21 @@ public interface OpcodeConstants
    // -----
 
    /**
+    * Special instruction for close a try/catch block.<br>
+    * Syntax :<br>
+    * <code>CATCH &lt;exceptionName&gt; &lt;label&gt;</code><br>
+    * Where :
+    * <ul>
+    * <li>exceptionName : Name f exception, same as corresponding {@link #Z_TRY}</li>
+    * <li>label : Label to go if exception happen</li>
+    * </ul>
+    * Inside try/catch block, no jump outside the block. The ?RETURN ({@link #RETURN}, {@link #ARETURN}, {@link #DRETURN},
+    * {@link #FRETURN}, {@link #IRETURN} or {@link #LRETURN}) <b>MUST</b> be before the catch<br>
+    * Avoid also jump from outside the block to inside the block.<br>
+    * A {@link OpcodeConstants#Z_CATCH} <b>MUST</b> corresponds to one {@link #Z_TRY}
+    */
+   public static final String Z_CATCH         = "CATCH";
+   /**
     * Special instruction (Not opcode) for declare a label<br>
     * Syntax :<br>
     * <code>LABEL &lt;name&gt;</code><br>
@@ -2465,6 +2480,21 @@ public interface OpcodeConstants
     * and apply the second strategy explains in {@link #RET}.
     */
    public static final String Z_SUB_S         = "SUB_S";
+   /**
+    * Special instruction to start a try/catch block<br>
+    * Syntax :<br>
+    * <code>TRY &lt;ExceptionType&gt; &lt;exceptionName&gt;</code> Where :
+    * <ul>
+    * <li>ExceptionType : Type of exception to catch.</li>
+    * <li>exceptionName : Exception name, this also declare a local variable, so be sure no already a local variable with same
+    * name. Name must be unique to be sure no confusion for {@link #Z_CATCH}</li>
+    * </ul>
+    * Inside try/catch block, no jump outside the block. The ?RETURN ({@link #RETURN}, {@link #ARETURN}, {@link #DRETURN},
+    * {@link #FRETURN}, {@link #IRETURN} or {@link #LRETURN}) <b>MUST</b> be before the catch<br>
+    * Avoid also jump from outside the block to inside the block.<br>
+    * A {@link #Z_TRY} <b>MUST</b> have its corresponding {@link #Z_CATCH}
+    */
+   public static final String Z_TRY           = "TRY";
    /**
     * Special instruction (Not opcode) for declare a variable<br>
     * Syntax:<br>

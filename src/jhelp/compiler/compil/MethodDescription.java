@@ -3,8 +3,10 @@ package jhelp.compiler.compil;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.sun.org.apache.bcel.internal.Constants;
 import com.sun.org.apache.bcel.internal.generic.InstructionHandle;
 import com.sun.org.apache.bcel.internal.generic.InstructionList;
+import com.sun.org.apache.bcel.internal.generic.ObjectType;
 import com.sun.org.apache.bcel.internal.generic.Type;
 
 import jhelp.util.list.Pair;
@@ -42,6 +44,8 @@ class MethodDescription
       return UtilText.concatenate("jhelpSubroutine_", subroutineName, "_ReturnValue");
    }
 
+   /** Method access flag */
+   private final int             accesFlags;
    /** Method code */
    private final List<CodeLine>  code;
    /** Indicates if inside the code block */
@@ -61,7 +65,23 @@ class MethodDescription
     */
    public MethodDescription(final String name)
    {
+      this(name, CompilerConstants.ACCES_FLAGS_METHOD);
+   }
+
+   /**
+    * Create a new instance of MethodDescription.<br>
+    * Flag is {{@link Constants#ACC_PUBLIC},{@link Constants#ACC_PRIVATE},{@link Constants#ACC_PROTECTED}} [|
+    * {@link Constants#ACC_STATIC}]
+    *
+    * @param name
+    *           Method name
+    * @param accessFlags
+    *           Method access flag
+    */
+   public MethodDescription(final String name, final int accessFlags)
+   {
       this.name = name;
+      this.accesFlags = accessFlags;
       this.insideCode = false;
       this.returnType = Type.VOID;
       this.parameters = new ArrayList<Parameter>();
@@ -75,10 +95,12 @@ class MethodDescription
     *           Parameter name
     * @param type
     *           Parameter type
+    * @param lineNumber
+    *           Line number where parameter is declare
     */
-   public void addParameter(final String name, final Type type)
+   public void addParameter(final String name, final Type type, final int lineNumber)
    {
-      this.parameters.add(new Parameter(name, type));
+      this.parameters.add(new Parameter(name, type, lineNumber));
    }
 
    /**
@@ -98,7 +120,7 @@ class MethodDescription
    public void appendCode(final CompilerContext compilerContext, final String instruction, final List<String> parameters, final int lineNumber)
          throws CompilerException
    {
-      if(OpcodeConstants.Z_SUB_S.equals(instruction) == true)
+      if(OpcodeConstants.Z_SUB_S.equals(instruction))
       {
          if(parameters.size() < 1)
          {
@@ -118,7 +140,7 @@ class MethodDescription
          return;
       }
 
-      if(OpcodeConstants.Z_SUB_E.equals(instruction) == true)
+      if(OpcodeConstants.Z_SUB_E.equals(instruction))
       {
          if(parameters.size() < 1)
          {
@@ -131,7 +153,7 @@ class MethodDescription
          return;
       }
 
-      if(OpcodeConstants.Z_SUB_C.equals(instruction) == true)
+      if(OpcodeConstants.Z_SUB_C.equals(instruction))
       {
          if(parameters.size() < 1)
          {
@@ -144,6 +166,43 @@ class MethodDescription
          return;
       }
 
+      if(OpcodeConstants.Z_TRY.equals(instruction))
+      {
+         if(parameters.size() < 2)
+         {
+            throw new CompilerException(lineNumber, OpcodeConstants.Z_TRY + " miss some parameters");
+         }
+
+         final ObjectType exceptionType = compilerContext.obtainExceptionType(parameters.get(0), lineNumber);
+         final String exceptionName = parameters.get(1);
+         compilerContext.obtainTryCatch(exceptionName, lineNumber, exceptionType);
+         this.code.add(new CodeLine(OpcodeConstants.Z_VAR, parameters, lineNumber));
+         return;
+      }
+
+      if(OpcodeConstants.Z_CATCH.equals(instruction))
+      {
+         if(parameters.size() < 2)
+         {
+            throw new CompilerException(lineNumber, OpcodeConstants.Z_CATCH + " miss some parameters");
+         }
+
+         final String exceptionName = parameters.get(0);
+         final String labelGoto = parameters.get(1);
+         final TryCatchInformation tryCatchInformation = compilerContext.obtainTryCatch(exceptionName);
+
+         if(tryCatchInformation == null)
+         {
+            throw new CompilerException(lineNumber, "No TRY for " + exceptionName);
+         }
+
+         tryCatchInformation.setEndLine(lineNumber - 1);
+         tryCatchInformation.setGotoLabel(labelGoto);
+         parameters.remove(1);
+         this.code.add(new CodeLine(OpcodeConstants.ASTORE, parameters, lineNumber));
+         return;
+      }
+
       this.code.add(new CodeLine(instruction, parameters, lineNumber));
    }
 
@@ -153,11 +212,13 @@ class MethodDescription
     * @param compilerContext
     *           Compiler context
     * @param lineNumber
-    *           End block code line number
+    *           Start block code line number
+    * @param intervals
+    *           Code blocks intervals
     * @throws CompilerException
     *            On compilation issue
     */
-   public void compile(final CompilerContext compilerContext, final int lineNumber) throws CompilerException
+   public void compile(final CompilerContext compilerContext, final int lineNumber, final Intervals intervals) throws CompilerException
    {
       final int length = this.parameters.size();
       final Type[] parmetersType = new Type[length];
@@ -165,7 +226,7 @@ class MethodDescription
       Parameter parameter;
 
       // A method will be add
-      compilerContext.initializeForMethod(true, lineNumber);
+      compilerContext.initializeForMethod((this.accesFlags & Constants.ACC_STATIC) == 0, lineNumber);
 
       // Collect method parameters
       for(int i = 0; i < length; i++)
@@ -197,8 +258,9 @@ class MethodDescription
          }
       }
 
+      intervals.resolveInvervals(linesTable);
       // Create and add the method since now we have all need for it
-      compilerContext.createMethod(this.returnType, this.name, parmetersType, parametersName, instructionList, linesTable);
+      compilerContext.createMethod(this.accesFlags, this.returnType, this.name, parmetersType, parametersName, instructionList, linesTable, intervals);
    }
 
    /**

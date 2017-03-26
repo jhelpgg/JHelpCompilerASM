@@ -3,10 +3,13 @@ package jhelp.compiler.instance;
 import java.io.IOException;
 
 import com.sun.org.apache.bcel.internal.classfile.JavaClass;
+import com.sun.org.apache.bcel.internal.classfile.Method;
 import com.sun.org.apache.bcel.internal.generic.ClassGen;
 
 import jhelp.compiler.compil.Compiler;
 import jhelp.compiler.compil.CompilerException;
+import jhelp.util.debug.Debug;
+import jhelp.util.debug.DebugLevel;
 import jhelp.util.io.ByteArray;
 import jhelp.util.list.foreach.ActionEach;
 
@@ -18,6 +21,8 @@ import jhelp.util.list.foreach.ActionEach;
 class ActionCompile
       implements ActionEach<SourceInformation>
 {
+   /** Activate debugs or not */
+   private static final boolean        DEBUG = false;
    /** Listener to report compilation process information */
    private final ActionCompileListener actionCompileListener;
    /** Class manager where store compiled class */
@@ -57,6 +62,21 @@ class ActionCompile
          final JavaClass javaClass = classGen.getJavaClass();
          final ByteArray byteArray = new ByteArray();
          javaClass.dump(byteArray.getOutputStream());
+
+         if(ActionCompile.DEBUG)
+         {
+            Debug.println(DebugLevel.INFORMATION, "classGen=", classGen);
+            Debug.println(DebugLevel.INFORMATION, "<===>");
+            Debug.println(DebugLevel.INFORMATION, "javaClass=", javaClass);
+            Debug.println(DebugLevel.INFORMATION, "<===>");
+
+            for(final Method method : javaClass.getMethods())
+            {
+               Debug.println(DebugLevel.INFORMATION, "method=", method);
+               Debug.println(DebugLevel.INFORMATION, "<--->");
+               Debug.println(DebugLevel.INFORMATION, "code=", method.getCode());
+            }
+         }
 
          synchronized(this.classManager)
          {

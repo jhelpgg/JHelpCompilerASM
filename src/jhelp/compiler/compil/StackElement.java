@@ -39,12 +39,12 @@ public class StackElement
          return false;
       }
 
-      if(this.type.equals(type) == true)
+      if(this.type.equals(type))
       {
          return true;
       }
 
-      if(this.isInt() == true)
+      if(this.isInt())
       {
          return (type == Type.BOOLEAN) || (type == Type.CHAR) || (type == Type.BYTE) || (type == Type.SHORT) || (type == Type.INT);
       }

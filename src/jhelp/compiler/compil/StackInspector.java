@@ -52,6 +52,7 @@ import com.sun.org.apache.bcel.internal.generic.PUTSTATIC;
 import com.sun.org.apache.bcel.internal.generic.TABLESWITCH;
 import com.sun.org.apache.bcel.internal.generic.Type;
 
+import jhelp.util.Utilities;
 import jhelp.util.list.Pair;
 import jhelp.util.text.UtilText;
 
@@ -114,7 +115,8 @@ class StackInspector
 
       for(int index = size - length, i = 0; index < size; index++, i++)
       {
-         if(this.stack.get(index).compatibleWtih(types[i]) == false)
+         if(!this.stack.get(index)
+                       .compatibleWtih(types[i]))
          {
             this.throwException(instructionHandle,
                   "the argument in stack at " + index + " is type of " + this.stack.get(index).getType() + " but the argument " + i + " need a " + types[i]);
@@ -212,10 +214,12 @@ class StackInspector
     *
     * @param constantPool
     *           Constant pool that defines constants
+    * @param tryCatchInformations
+    *           Try/catch blocks
     * @throws StackInspectorException
     *            If one instruction in list don't respect the stack
     */
-   public void checkStack(final ConstantPoolGen constantPool) throws StackInspectorException
+   public void checkStack(final ConstantPoolGen constantPool, final List<TryCatchInformation> tryCatchInformations) throws StackInspectorException
    {
       final InstructionHandle[] instructionHandles = this.instructionList.getInstructionHandles();
       final int length = instructionHandles.length;
@@ -227,6 +231,16 @@ class StackInspector
 
       final TreeSet<Step> already = new TreeSet<Step>();
       final Stack<Step> stackExecution = new Stack<Step>();
+
+      for(final TryCatchInformation tryCatchInformation : tryCatchInformations)
+      {
+         this.stack.add(new StackElement(tryCatchInformation.getExceptionType()));
+         this.path.add(new StackInfo(tryCatchInformation.getStartLine(), this.stack));
+         stackExecution.push(new Step(Utilities.indexOf(instructionHandles, tryCatchInformation.getGotoInstruction()), this.stack, this.path));
+         this.path.remove(this.path.size() - 1);
+         this.stack.remove(this.stack.size() - 1);
+      }
+
       Step step = new Step(0, this.stack, this.path);
       stackExecution.push(step);
       InstructionHandle instructionHandle;
@@ -238,7 +252,7 @@ class StackInspector
       StackInfo stackInfo;
       Type ret;
 
-      while(stackExecution.isEmpty() == false)
+      while(!stackExecution.isEmpty())
       {
          step = stackExecution.pop();
          step.transferStatus(this.stack, this.path);
@@ -437,8 +451,10 @@ class StackInspector
             // ..., arrayref, index (int) => ..., value (int)
             case Constants.IALOAD:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isArrayRef() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isArrayRef()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IALOAD required stack end with 'arrayref' 'int'");
                }
@@ -449,8 +465,10 @@ class StackInspector
             // ..., arrayref, index (int) => ..., value (long)
             case Constants.LALOAD:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isArrayRef() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isArrayRef()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "LALOAD required stack end with 'arrayref' 'int'");
                }
@@ -461,8 +479,10 @@ class StackInspector
             // ..., arrayref, index (int) => ..., value (float)
             case Constants.FALOAD:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isArrayRef() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isArrayRef()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "FALOAD required stack end with 'arrayref' 'int'");
                }
@@ -473,8 +493,10 @@ class StackInspector
             // ..., arrayref, index (int) => ..., value (double)
             case Constants.DALOAD:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isArrayRef() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isArrayRef()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "DALOAD required stack end with 'arrayref' 'int'");
                }
@@ -485,8 +507,10 @@ class StackInspector
             // ..., arrayref, index (int) => ..., value (objectref)
             case Constants.AALOAD:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isArrayRef() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isArrayRef()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "AALOAD required stack end with 'arrayref' 'int'");
                }
@@ -498,8 +522,10 @@ class StackInspector
             // ..., arrayref, index (int) => ..., value (int)
             case Constants.BALOAD:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isArrayRef() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isArrayRef()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "BALOAD required stack end with 'arrayref' 'int'");
                }
@@ -510,8 +536,10 @@ class StackInspector
             // ..., arrayref, index (int) => ..., value (int)
             case Constants.CALOAD:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isArrayRef() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isArrayRef()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "CALOAD required stack end with 'arrayref' 'int'");
                }
@@ -522,8 +550,10 @@ class StackInspector
             // ..., arrayref, index (int) => ..., value (int)
             case Constants.SALOAD:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isArrayRef() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isArrayRef()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "SALOAD required stack end with 'arrayref' 'int'");
                }
@@ -534,7 +564,8 @@ class StackInspector
             // ..., value(int) => ...
             case Constants.ISTORE:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "ISTORE required stack end with 'int'");
                }
@@ -544,7 +575,8 @@ class StackInspector
             // ..., value(long) => ...
             case Constants.LSTORE:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "LSTORE required stack end with 'long'");
                }
@@ -554,7 +586,8 @@ class StackInspector
             // ..., value(float) => ...
             case Constants.FSTORE:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 1)
+                                 .isFloat()))
                {
                   this.throwException(instructionHandle, "FSTORE required stack end with 'float'");
                }
@@ -564,7 +597,8 @@ class StackInspector
             // ..., value(double) => ...
             case Constants.DSTORE:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 1)
+                                 .isDouble()))
                {
                   this.throwException(instructionHandle, "DSTORE required stack end with 'double'");
                }
@@ -574,7 +608,8 @@ class StackInspector
             // ..., value(objectref) => ...
             case Constants.ASTORE:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "ASTORE required stack end with 'objectref'");
                }
@@ -584,7 +619,8 @@ class StackInspector
             // ..., value(int) => ...
             case Constants.ISTORE_0:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "ISTORE required stack end with 'int'");
                }
@@ -594,7 +630,8 @@ class StackInspector
             // ..., value(int) => ...
             case Constants.ISTORE_1:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "ISTORE required stack end with 'int'");
                }
@@ -604,7 +641,8 @@ class StackInspector
             // ..., value(int) => ...
             case Constants.ISTORE_2:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "ISTORE required stack end with 'int'");
                }
@@ -614,7 +652,8 @@ class StackInspector
             // ..., value(int) => ...
             case Constants.ISTORE_3:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "ISTORE required stack end with 'int'");
                }
@@ -624,7 +663,8 @@ class StackInspector
             // ..., value(long) => ...
             case Constants.LSTORE_0:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "LSTORE required stack end with 'long'");
                }
@@ -634,7 +674,8 @@ class StackInspector
             // ..., value(long) => ...
             case Constants.LSTORE_1:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "LSTORE required stack end with 'long'");
                }
@@ -644,7 +685,8 @@ class StackInspector
             // ..., value(long) => ...
             case Constants.LSTORE_2:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "LSTORE required stack end with 'long'");
                }
@@ -654,7 +696,8 @@ class StackInspector
             // ..., value(long) => ...
             case Constants.LSTORE_3:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "LSTORE required stack end with 'long'");
                }
@@ -664,7 +707,8 @@ class StackInspector
             // ..., value(float) => ...
             case Constants.FSTORE_0:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 1)
+                                 .isFloat()))
                {
                   this.throwException(instructionHandle, "FSTORE required stack end with 'float'");
                }
@@ -674,7 +718,8 @@ class StackInspector
             // ..., value(float) => ...
             case Constants.FSTORE_1:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 1)
+                                 .isFloat()))
                {
                   this.throwException(instructionHandle, "FSTORE required stack end with 'float'");
                }
@@ -684,7 +729,8 @@ class StackInspector
             // ..., value(float) => ...
             case Constants.FSTORE_2:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 1)
+                                 .isFloat()))
                {
                   this.throwException(instructionHandle, "FSTORE required stack end with 'float'");
                }
@@ -694,7 +740,8 @@ class StackInspector
             // ..., value(float) => ...
             case Constants.FSTORE_3:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 1)
+                                 .isFloat()))
                {
                   this.throwException(instructionHandle, "FSTORE required stack end with 'float'");
                }
@@ -704,7 +751,8 @@ class StackInspector
             // ..., value(double) => ...
             case Constants.DSTORE_0:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 1)
+                                 .isDouble()))
                {
                   this.throwException(instructionHandle, "DSTORE required stack end with 'double'");
                }
@@ -714,7 +762,8 @@ class StackInspector
             // ..., value(double) => ...
             case Constants.DSTORE_1:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 1)
+                                 .isDouble()))
                {
                   this.throwException(instructionHandle, "DSTORE required stack end with 'double'");
                }
@@ -724,7 +773,8 @@ class StackInspector
             // ..., value(double) => ...
             case Constants.DSTORE_2:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 1)
+                                 .isDouble()))
                {
                   this.throwException(instructionHandle, "DSTORE required stack end with 'double'");
                }
@@ -734,7 +784,8 @@ class StackInspector
             // ..., value(double) => ...
             case Constants.DSTORE_3:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 1)
+                                 .isDouble()))
                {
                   this.throwException(instructionHandle, "DSTORE required stack end with 'double'");
                }
@@ -744,7 +795,8 @@ class StackInspector
             // ..., value(objectref) => ...
             case Constants.ASTORE_0:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "ASTORE required stack end with 'objectref'");
                }
@@ -754,7 +806,8 @@ class StackInspector
             // ..., value(objectref) => ...
             case Constants.ASTORE_1:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "ASTORE required stack end with 'objectref'");
                }
@@ -764,7 +817,8 @@ class StackInspector
             // ..., value(objectref) => ...
             case Constants.ASTORE_2:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "ASTORE required stack end with 'objectref'");
                }
@@ -774,7 +828,8 @@ class StackInspector
             // ..., value(objectref) => ...
             case Constants.ASTORE_3:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "ASTORE required stack end with 'objectref'");
                }
@@ -784,9 +839,12 @@ class StackInspector
             // ..., arrayref, index (int), value (int) => ...
             case Constants.IASTORE:
                if((size < 3) || //
-                     (this.stack.get(size - 3).isArrayRef() == false) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 3)
+                                 .isArrayRef()) || //
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IASTORE need stack end with : arrayref, int, int");
                }
@@ -796,9 +854,12 @@ class StackInspector
             // ..., arrayref, index (int), value (long) => ...
             case Constants.LASTORE:
                if((size < 3) || //
-                     (this.stack.get(size - 3).isArrayRef() == false) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 3)
+                                 .isArrayRef()) || //
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "LASTORE need stack end with : arrayref, int, long");
                }
@@ -808,9 +869,12 @@ class StackInspector
             // ..., arrayref, index (int), value (float) => ...
             case Constants.FASTORE:
                if((size < 3) || //
-                     (this.stack.get(size - 3).isArrayRef() == false) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 3)
+                                 .isArrayRef()) || //
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isFloat()))
                {
                   this.throwException(instructionHandle, "FASTORE need stack end with : arrayref, int, float");
                }
@@ -820,9 +884,12 @@ class StackInspector
             // ..., arrayref, index (int), value (double) => ...
             case Constants.DASTORE:
                if((size < 3) || //
-                     (this.stack.get(size - 3).isArrayRef() == false) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 3)
+                                 .isArrayRef()) || //
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isDouble()))
                {
                   this.throwException(instructionHandle, "DASTORE need stack end with : arrayref, int, double");
                }
@@ -832,9 +899,12 @@ class StackInspector
             // ..., arrayref, index (int), value (objectref) => ...
             case Constants.AASTORE:
                if((size < 3) || //
-                     (this.stack.get(size - 3).isArrayRef() == false) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 3)
+                                 .isArrayRef()) || //
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "AASTORE need stack end with : arrayref, int, objectref");
                }
@@ -844,9 +914,12 @@ class StackInspector
             // ..., arrayref, index (int), value (int) => ...
             case Constants.BASTORE:
                if((size < 3) || //
-                     (this.stack.get(size - 3).isArrayRef() == false) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 3)
+                                 .isArrayRef()) || //
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "BASTORE need stack end with : arrayref, int, int");
                }
@@ -856,9 +929,12 @@ class StackInspector
             // ..., arrayref, index (int), value (int) => ...
             case Constants.CASTORE:
                if((size < 3) || //
-                     (this.stack.get(size - 3).isArrayRef() == false) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 3)
+                                 .isArrayRef()) || //
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "CASTORE need stack end with : arrayref, int, int");
                }
@@ -868,9 +944,12 @@ class StackInspector
             // ..., arrayref, index (int), value (int) => ...
             case Constants.SASTORE:
                if((size < 3) || //
-                     (this.stack.get(size - 3).isArrayRef() == false) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 3)
+                                 .isArrayRef()) || //
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "SASTORE need stack end with : arrayref, int, int");
                }
@@ -880,7 +959,8 @@ class StackInspector
             // .., value (not long nor double) => ...
             case Constants.POP:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isDoubleOrLong() == true))
+                     (this.stack.get(size - 1)
+                                .isDoubleOrLong()))
                {
                   this.throwException(instructionHandle, "POP need stack end with : notLongNorDouble");
                }
@@ -896,10 +976,12 @@ class StackInspector
 
                if(size > 0)
                {
-                  if(this.stack.get(size - 1).isDoubleOrLong() == false)
+                  if(!this.stack.get(size - 1)
+                                .isDoubleOrLong())
                   {
                      temp = 2;
-                     condition = (size > 1) && (this.stack.get(size - 2).isDoubleOrLong() == false);
+                     condition = (size > 1) && (!this.stack.get(size - 2)
+                                                           .isDoubleOrLong());
                   }
                   else
                   {
@@ -908,7 +990,7 @@ class StackInspector
                   }
                }
 
-               if(condition == false)
+               if(!condition)
                {
                   this.throwException(instructionHandle, "POP2 need stack end with : 'notLongNorDouble notLongNorDouble' OR 'longOrDouble'");
                }
@@ -918,7 +1000,8 @@ class StackInspector
             // ..., value (not long nor double)=> ..., value, value
             case Constants.DUP:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isDoubleOrLong() == true))
+                     (this.stack.get(size - 1)
+                                .isDoubleOrLong()))
                {
                   this.throwException(instructionHandle, "DUP need stack end with : notLongNorDouble");
                }
@@ -928,8 +1011,10 @@ class StackInspector
             // ..., value2 (not long nor double), value1 (not long nor double) => ..., value1, value2, value1
             case Constants.DUP_X1:
                if((size < 2) || //
-                     (this.stack.get(size - 1).isDoubleOrLong() == true) || //
-                     (this.stack.get(size - 2).isDoubleOrLong() == true))
+                     (this.stack.get(size - 1)
+                                .isDoubleOrLong()) || //
+                     (this.stack.get(size - 2)
+                                .isDoubleOrLong()))
                {
                   this.throwException(instructionHandle, "DUP_X1 need stack end with : notLongNorDouble notLongNorDouble");
                }
@@ -962,14 +1047,14 @@ class StackInspector
                }
 
                if((type1 == null) || //
-                     (type1.isDoubleOrLong() == true) || //
-                     ((type2.isDoubleOrLong() == false) && ((type3 == null) || (type3.isDoubleOrLong() == true))))
+                     (type1.isDoubleOrLong()) || //
+                     ((!type2.isDoubleOrLong()) && ((type3 == null) || (type3.isDoubleOrLong()))))
                {
                   this.throwException(instructionHandle,
                         "DUP_X2 need stack end with : 'notLongNorDouble notLongNorDouble notLongNorDouble' OR 'longOrDouble notLongNorDouble'");
                }
 
-               if(type2.isDoubleOrLong() == true)
+               if(type2.isDoubleOrLong())
                {
                   this.pop(2);
                   this.push(type1.getType());
@@ -980,7 +1065,8 @@ class StackInspector
                {
                   this.pop(3);
                   this.push(type1.getType());
-                  this.push(type3.getType());
+                   assert type3 != null;
+                   this.push(type3.getType());
                   this.push(type2.getType());
                   this.push(type1.getType());
                }
@@ -1003,18 +1089,19 @@ class StackInspector
                }
 
                if((type1 == null) || //
-                     ((type1.isDoubleOrLong() == false) && ((type2 == null) || (type2.isDoubleOrLong() == true))))
+                     ((!type1.isDoubleOrLong()) && ((type2 == null) || (type2.isDoubleOrLong()))))
                {
                   this.throwException(instructionHandle, "DUP2 need stack end with : 'notLongNorDouble notLongNorDouble' OR 'longOrDouble'");
                }
 
-               if(type1.isDoubleOrLong() == true)
+               if(type1.isDoubleOrLong())
                {
                   this.push(type1.getType());
                }
                else
                {
-                  this.push(type2.getType());
+                   assert type2 != null;
+                   this.push(type2.getType());
                   this.push(type1.getType());
                }
             break;
@@ -1039,14 +1126,14 @@ class StackInspector
                }
 
                if((type1 == null) || //
-                     (type2.isDoubleOrLong() == true) || //
-                     ((type1.isDoubleOrLong() == false) && ((type3 == null) || (type3.isDoubleOrLong() == true))))
+                     (type2.isDoubleOrLong()) || //
+                     ((!type1.isDoubleOrLong()) && ((type3 == null) || (type3.isDoubleOrLong()))))
                {
                   this.throwException(instructionHandle,
                         "DUP2_X1 need stack end with : 'notLongNorDouble notLongNorDouble notLongNorDouble' OR 'notLongNorDouble longOrDouble'");
                }
 
-               if(type1.isDoubleOrLong() == true)
+               if(type1.isDoubleOrLong())
                {
                   this.pop(2);
                   this.push(type1.getType());
@@ -1058,7 +1145,8 @@ class StackInspector
                   this.pop(3);
                   this.push(type2.getType());
                   this.push(type1.getType());
-                  this.push(type3.getType());
+                   assert type3 != null;
+                   this.push(type3.getType());
                   this.push(type2.getType());
                   this.push(type1.getType());
                }
@@ -1096,18 +1184,18 @@ class StackInspector
                }
 
                if((type1 == null) || //
-                     ((type1.isDoubleOrLong() == false) && ((type2.isDoubleOrLong() == true)
-                           || ((type3 != null) && (type3.isDoubleOrLong() == false) && ((type4 == null) || (type4.isDoubleOrLong() == true)))))
+                     ((!type1.isDoubleOrLong()) && ((type2.isDoubleOrLong())
+                           || ((type3 != null) && (!type3.isDoubleOrLong()) && ((type4 == null) || (type4.isDoubleOrLong())))))
                      || //
-                     ((type1.isDoubleOrLong() == true) && (type2.isDoubleOrLong() == false) && ((type3 == null) || (type3.isDoubleOrLong() == true))))
+                     ((type1.isDoubleOrLong()) && (!type2.isDoubleOrLong()) && ((type3 == null) || (type3.isDoubleOrLong()))))
                {
                   this.throwException(instructionHandle,
                         "DUP2_X2 need stack end with : 'notLongNorDouble notLongNorDouble notLongNorDouble notLongNorDouble' OR 'notLongNorDouble notLongNorDouble longOrDouble' OR 'longOrDouble notLongNorDouble notLongNorDouble' OR 'longOrDouble longOrDouble'");
                }
 
-               if(type1.isDoubleOrLong() == true)
+               if(type1.isDoubleOrLong())
                {
-                  if(type2.isDoubleOrLong() == true)
+                  if(type2.isDoubleOrLong())
                   {
                      this.pop(2);
                      this.push(type1.getType());
@@ -1118,29 +1206,35 @@ class StackInspector
                   {
                      this.pop(3);
                      this.push(type1.getType());
-                     this.push(type3.getType());
+                      assert type3 != null;
+                      this.push(type3.getType());
                      this.push(type2.getType());
                      this.push(type1.getType());
                   }
                }
-               else if(type3.isDoubleOrLong() == true)
-               {
-                  this.pop(3);
-                  this.push(type2.getType());
-                  this.push(type1.getType());
-                  this.push(type3.getType());
-                  this.push(type2.getType());
-                  this.push(type1.getType());
-               }
                else
                {
-                  this.pop(4);
-                  this.push(type2.getType());
-                  this.push(type1.getType());
-                  this.push(type4.getType());
-                  this.push(type3.getType());
-                  this.push(type2.getType());
-                  this.push(type1.getType());
+                   assert type3 != null;
+                   if(type3.isDoubleOrLong())
+                   {
+                      this.pop(3);
+                      this.push(type2.getType());
+                      this.push(type1.getType());
+                      this.push(type3.getType());
+                      this.push(type2.getType());
+                      this.push(type1.getType());
+                   }
+                   else
+                   {
+                      this.pop(4);
+                      this.push(type2.getType());
+                      this.push(type1.getType());
+                      assert type4 != null;
+                      this.push(type4.getType());
+                      this.push(type3.getType());
+                      this.push(type2.getType());
+                      this.push(type1.getType());
+                   }
                }
             break;
             // ..., value1 (not long nor double), value2 (not long nor double) => ..., value2, value1
@@ -1155,7 +1249,7 @@ class StackInspector
                }
 
                if((type1 == null) || //
-                     (type1.isDoubleOrLong() == true) || (type2.isDoubleOrLong() == true))
+                     (type1.isDoubleOrLong()) || (type2.isDoubleOrLong()))
                {
                   this.throwException(instructionHandle, "SWAP need stack end with : notLongNorDouble notLongNorDouble");
                }
@@ -1167,8 +1261,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ..., result(int)
             case Constants.IADD:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IADD need stack end with : int int");
                }
@@ -1178,8 +1274,10 @@ class StackInspector
             // ..., value1(long), value2(long) => ..., result(long)
             case Constants.LADD:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isLong() == false) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 2)
+                                 .isLong()) || //
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "LADD need stack end with : long long");
                }
@@ -1189,8 +1287,10 @@ class StackInspector
             // ..., value1(float), value2(float) => ..., result(float)
             case Constants.FADD:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isFloat() == false) || //
-                     (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 2)
+                                 .isFloat()) || //
+                     (!this.stack.get(size - 1)
+                                 .isFloat()))
                {
                   this.throwException(instructionHandle, "FADD need stack end with : float float");
                }
@@ -1200,8 +1300,10 @@ class StackInspector
             // ..., value1(double), value2(double) => ..., result(double)
             case Constants.DADD:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isDouble() == false) || //
-                     (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 2)
+                                 .isDouble()) || //
+                     (!this.stack.get(size - 1)
+                                 .isDouble()))
                {
                   this.throwException(instructionHandle, "DADD need stack end with : double double");
                }
@@ -1211,8 +1313,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ..., result(int)
             case Constants.ISUB:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "ISUB need stack end with : int int");
                }
@@ -1222,8 +1326,10 @@ class StackInspector
             // ..., value1(long), value2(long) => ..., result(long)
             case Constants.LSUB:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isLong() == false) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 2)
+                                 .isLong()) || //
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "LSUB need stack end with : long long");
                }
@@ -1233,8 +1339,10 @@ class StackInspector
             // ..., value1(float), value2(float) => ..., result(float)
             case Constants.FSUB:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isFloat() == false) || //
-                     (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 2)
+                                 .isFloat()) || //
+                     (!this.stack.get(size - 1)
+                                 .isFloat()))
                {
                   this.throwException(instructionHandle, "FSUB need stack end with : float float");
                }
@@ -1244,8 +1352,10 @@ class StackInspector
             // ..., value1(double), value2(double) => ..., result(double)
             case Constants.DSUB:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isDouble() == false) || //
-                     (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 2)
+                                 .isDouble()) || //
+                     (!this.stack.get(size - 1)
+                                 .isDouble()))
                {
                   this.throwException(instructionHandle, "DSUB need stack end with : double double");
                }
@@ -1255,8 +1365,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ..., result(int)
             case Constants.IMUL:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IMUL need stack end with : int int");
                }
@@ -1266,8 +1378,10 @@ class StackInspector
             // ..., value1(long), value2(long) => ..., result(long)
             case Constants.LMUL:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isLong() == false) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 2)
+                                 .isLong()) || //
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "LMUL need stack end with : long long");
                }
@@ -1277,8 +1391,10 @@ class StackInspector
             // ..., value1(float), value2(float) => ..., result(float)
             case Constants.FMUL:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isFloat() == false) || //
-                     (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 2)
+                                 .isFloat()) || //
+                     (!this.stack.get(size - 1)
+                                 .isFloat()))
                {
                   this.throwException(instructionHandle, "FMUL need stack end with : float float");
                }
@@ -1288,8 +1404,10 @@ class StackInspector
             // ..., value1(double), value2(double) => ..., result(double)
             case Constants.DMUL:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isDouble() == false) || //
-                     (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 2)
+                                 .isDouble()) || //
+                     (!this.stack.get(size - 1)
+                                 .isDouble()))
                {
                   this.throwException(instructionHandle, "DMUL need stack end with : double double");
                }
@@ -1299,8 +1417,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ..., result(int)
             case Constants.IDIV:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IDIV need stack end with : int int");
                }
@@ -1310,8 +1430,10 @@ class StackInspector
             // ..., value1(long), value2(long) => ..., result(long)
             case Constants.LDIV:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isLong() == false) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 2)
+                                 .isLong()) || //
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "LDIV need stack end with : long long");
                }
@@ -1321,8 +1443,10 @@ class StackInspector
             // ..., value1(float), value2(float) => ..., result(float)
             case Constants.FDIV:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isFloat() == false) || //
-                     (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 2)
+                                 .isFloat()) || //
+                     (!this.stack.get(size - 1)
+                                 .isFloat()))
                {
                   this.throwException(instructionHandle, "FDIV need stack end with : float float");
                }
@@ -1332,8 +1456,10 @@ class StackInspector
             // ..., value1(double), value2(double) => ..., result(double)
             case Constants.DDIV:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isDouble() == false) || //
-                     (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 2)
+                                 .isDouble()) || //
+                     (!this.stack.get(size - 1)
+                                 .isDouble()))
                {
                   this.throwException(instructionHandle, "DDIV need stack end with : double double");
                }
@@ -1343,8 +1469,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ..., result(int)
             case Constants.IREM:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IREM need stack end with : int int");
                }
@@ -1354,8 +1482,10 @@ class StackInspector
             // ..., value1(long), value2(long) => ..., result(long)
             case Constants.LREM:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isLong() == false) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 2)
+                                 .isLong()) || //
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "LREM need stack end with : long long");
                }
@@ -1365,8 +1495,10 @@ class StackInspector
             // ..., value1(float), value2(float) => ..., result(float)
             case Constants.FREM:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isFloat() == false) || //
-                     (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 2)
+                                 .isFloat()) || //
+                     (!this.stack.get(size - 1)
+                                 .isFloat()))
                {
                   this.throwException(instructionHandle, "FREM need stack end with : float float");
                }
@@ -1376,8 +1508,10 @@ class StackInspector
             // ..., value1(double), value2(double) => ..., result(double)
             case Constants.DREM:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isDouble() == false) || //
-                     (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 2)
+                                 .isDouble()) || //
+                     (!this.stack.get(size - 1)
+                                 .isDouble()))
                {
                   this.throwException(instructionHandle, "DREM need stack end with : double double");
                }
@@ -1387,7 +1521,8 @@ class StackInspector
             // ..., value(int) => ..., result(int)
             case Constants.INEG:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "INEG need stack end with : int");
                }
@@ -1395,7 +1530,8 @@ class StackInspector
             // ..., value(long) => ..., result(long)
             case Constants.LNEG:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "LNEG need stack end with : long");
                }
@@ -1403,7 +1539,8 @@ class StackInspector
             // ..., value(float) => ..., result(float)
             case Constants.FNEG:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 1)
+                                 .isFloat()))
                {
                   this.throwException(instructionHandle, "FNEG need stack end with : float");
                }
@@ -1411,7 +1548,8 @@ class StackInspector
             // ..., value(double) => ..., result(double)
             case Constants.DNEG:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 1)
+                                 .isDouble()))
                {
                   this.throwException(instructionHandle, "DNEG need stack end with : double");
                }
@@ -1419,8 +1557,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ..., result(int)
             case Constants.ISHL:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "ISHL need stack end with : int int");
                }
@@ -1430,8 +1570,10 @@ class StackInspector
             // ..., value1(long), value2(long) => ..., result(long)
             case Constants.LSHL:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isLong() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isLong()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "LSHL need stack end with : long int");
                }
@@ -1441,8 +1583,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ..., result(int)
             case Constants.ISHR:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "ISHR need stack end with : int int");
                }
@@ -1452,8 +1596,10 @@ class StackInspector
             // ..., value1(long), value2(long) => ..., result(long)
             case Constants.LSHR:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isLong() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isLong()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "LSHR need stack end with : long int");
                }
@@ -1463,8 +1609,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ..., result(int)
             case Constants.IUSHR:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IUSHR need stack end with : int int");
                }
@@ -1474,8 +1622,10 @@ class StackInspector
             // ..., value1(long), value2(long) => ..., result(long)
             case Constants.LUSHR:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isLong() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isLong()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "LUSHR need stack end with : long int");
                }
@@ -1485,8 +1635,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ..., result(int)
             case Constants.IAND:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IAND need stack end with : int int");
                }
@@ -1496,8 +1648,10 @@ class StackInspector
             // ..., value1(long), value2(long) => ..., result(long)
             case Constants.LAND:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isLong() == false) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 2)
+                                 .isLong()) || //
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "LAND need stack end with : long long");
                }
@@ -1507,8 +1661,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ..., result(int)
             case Constants.IOR:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IOR need stack end with : int int");
                }
@@ -1518,8 +1674,10 @@ class StackInspector
             // ..., value1(long), value2(long) => ..., result(long)
             case Constants.LOR:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isLong() == false) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 2)
+                                 .isLong()) || //
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "LOR need stack end with : long long");
                }
@@ -1529,8 +1687,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ..., result(int)
             case Constants.IXOR:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IXOR need stack end with : int int");
                }
@@ -1540,8 +1700,10 @@ class StackInspector
             // ..., value1(long), value2(long) => ..., result(long)
             case Constants.LXOR:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isLong() == false) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 2)
+                                 .isLong()) || //
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "LXOR need stack end with : long long");
                }
@@ -1554,7 +1716,8 @@ class StackInspector
             // ..., value(int) => ..., result(long)
             case Constants.I2L:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "I2L need stack end with : int");
                }
@@ -1565,7 +1728,8 @@ class StackInspector
             // ..., value(int) => ..., result(float)
             case Constants.I2F:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "I2F need stack end with : int");
                }
@@ -1576,7 +1740,8 @@ class StackInspector
             // ..., value(int) => ..., result(double)
             case Constants.I2D:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "I2D need stack end with : int");
                }
@@ -1587,7 +1752,8 @@ class StackInspector
             // ..., value(long) => ..., result(int)
             case Constants.L2I:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "L2I need stack end with : long");
                }
@@ -1598,7 +1764,8 @@ class StackInspector
             // ..., value(long) => ..., result(float)
             case Constants.L2F:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "L2F need stack end with : long");
                }
@@ -1609,7 +1776,8 @@ class StackInspector
             // ..., value(long) => ..., result(double)
             case Constants.L2D:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "L2D need stack end with : long");
                }
@@ -1620,7 +1788,8 @@ class StackInspector
             // ..., value(float) => ..., result(int)
             case Constants.F2I:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 1)
+                                 .isFloat()))
                {
                   this.throwException(instructionHandle, "F2I need stack end with : float");
                }
@@ -1631,7 +1800,8 @@ class StackInspector
             // ..., value(float) => ..., result(long)
             case Constants.F2L:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 1)
+                                 .isFloat()))
                {
                   this.throwException(instructionHandle, "F2L need stack end with : float");
                }
@@ -1642,7 +1812,8 @@ class StackInspector
             // ..., value(float) => ..., result(double)
             case Constants.F2D:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 1)
+                                 .isFloat()))
                {
                   this.throwException(instructionHandle, "F2D need stack end with : float");
                }
@@ -1653,7 +1824,8 @@ class StackInspector
             // ..., value(double) => ..., result(int)
             case Constants.D2I:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 1)
+                                 .isDouble()))
                {
                   this.throwException(instructionHandle, "D2I need stack end with : double");
                }
@@ -1664,7 +1836,8 @@ class StackInspector
             // ..., value(double) => ..., result(long)
             case Constants.D2L:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 1)
+                                 .isDouble()))
                {
                   this.throwException(instructionHandle, "D2L need stack end with : double");
                }
@@ -1675,7 +1848,8 @@ class StackInspector
             // ..., value(double) => ..., result(float)
             case Constants.D2F:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 1)
+                                 .isDouble()))
                {
                   this.throwException(instructionHandle, "D2F need stack end with : double");
                }
@@ -1686,7 +1860,8 @@ class StackInspector
             // ..., value(int) => ..., result(int)
             case Constants.I2B:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "I2B need stack end with : int");
                }
@@ -1694,7 +1869,8 @@ class StackInspector
             // ..., value(int) => ..., result(int)
             case Constants.I2C:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "I2C need stack end with : int");
                }
@@ -1702,7 +1878,8 @@ class StackInspector
             // ..., value(int) => ..., result(int)
             case Constants.I2S:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "I2S need stack end with : int");
                }
@@ -1710,7 +1887,9 @@ class StackInspector
             // ..., value1(long), value2(long) => result(int)
             case Constants.LCMP:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isLong() == false) || (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 2)
+                                 .isLong()) || (!this.stack.get(size - 1)
+                                                           .isLong()))
                {
                   this.throwException(instructionHandle, "LCMP need stack end with : long long");
                }
@@ -1721,7 +1900,9 @@ class StackInspector
             // ..., value1(float), value2(float) => result(int)
             case Constants.FCMPL:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isFloat() == false) || (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 2)
+                                 .isFloat()) || (!this.stack.get(size - 1)
+                                                            .isFloat()))
                {
                   this.throwException(instructionHandle, "FCMPL need stack end with : float float");
                }
@@ -1732,7 +1913,9 @@ class StackInspector
             // ..., value1(float), value2(float) => result(int)
             case Constants.FCMPG:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isFloat() == false) || (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 2)
+                                 .isFloat()) || (!this.stack.get(size - 1)
+                                                            .isFloat()))
                {
                   this.throwException(instructionHandle, "FCMPG need stack end with : float float");
                }
@@ -1743,7 +1926,9 @@ class StackInspector
             // ..., value1(double), value2(double) => result(int)
             case Constants.DCMPL:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isDouble() == false) || (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 2)
+                                 .isDouble()) || (!this.stack.get(size - 1)
+                                                             .isDouble()))
                {
                   this.throwException(instructionHandle, "DCMPL need stack end with : double double");
                }
@@ -1754,7 +1939,9 @@ class StackInspector
             // ..., value1(double), value2(double) => result(int)
             case Constants.DCMPG:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isDouble() == false) || (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 2)
+                                 .isDouble()) || (!this.stack.get(size - 1)
+                                                             .isDouble()))
                {
                   this.throwException(instructionHandle, "DCMPG need stack end with : double double");
                }
@@ -1765,7 +1952,8 @@ class StackInspector
             // ..., value(int) => ...
             case Constants.IFEQ:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IFEQ need stack end with : int");
                }
@@ -1784,7 +1972,8 @@ class StackInspector
             // ..., value(int) => ...
             case Constants.IFNE:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IFNE need stack end with : int");
                }
@@ -1803,7 +1992,8 @@ class StackInspector
             // ..., value(int) => ...
             case Constants.IFLT:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IFLT need stack end with : int");
                }
@@ -1822,7 +2012,8 @@ class StackInspector
             // ..., value(int) => ...
             case Constants.IFGE:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IFGE need stack end with : int");
                }
@@ -1841,7 +2032,8 @@ class StackInspector
             // ..., value(int) => ...
             case Constants.IFGT:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IFGT need stack end with : int");
                }
@@ -1860,7 +2052,8 @@ class StackInspector
             // ..., value(int) => ...
             case Constants.IFLE:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IFLE need stack end with : int");
                }
@@ -1879,8 +2072,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ...
             case Constants.IF_ICMPEQ:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IF_ICMPEQ need stack end with : int int");
                }
@@ -1899,8 +2094,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ...
             case Constants.IF_ICMPNE:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IF_ICMPNE need stack end with : int int");
                }
@@ -1919,8 +2116,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ...
             case Constants.IF_ICMPLT:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IF_ICMPLT need stack end with : int int");
                }
@@ -1939,8 +2138,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ...
             case Constants.IF_ICMPGE:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IF_ICMPGE need stack end with : int int");
                }
@@ -1959,8 +2160,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ...
             case Constants.IF_ICMPGT:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IF_ICMPGT need stack end with : int int");
                }
@@ -1979,8 +2182,10 @@ class StackInspector
             // ..., value1(int), value2(int) => ...
             case Constants.IF_ICMPLE:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isInt() == false) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 2)
+                                 .isInt()) || //
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IF_ICMPLE need stack end with : int int");
                }
@@ -1999,8 +2204,10 @@ class StackInspector
             // ..., value1(objectref), value2(objectref) => ...
             case Constants.IF_ACMPEQ:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isObjectRef() == false) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 2)
+                                 .isObjectRef()) || //
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "IF_ACMPEQ need stack end with : objectref objectref");
                }
@@ -2019,8 +2226,10 @@ class StackInspector
             // ..., value1(objectref), value2(objectref) => ...
             case Constants.IF_ACMPNE:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isObjectRef() == false) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 2)
+                                 .isObjectRef()) || //
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "IF_ACMPNE need stack end with : objectref objectref");
                }
@@ -2068,7 +2277,8 @@ class StackInspector
             // ..., key(int) => ...
             case Constants.TABLESWITCH:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "TABLESWITCH need stack end with : int");
                }
@@ -2099,7 +2309,8 @@ class StackInspector
             // ..., key(int) => ...
             case Constants.LOOKUPSWITCH:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "LOOKUPSWITCH need stack end with : int");
                }
@@ -2130,7 +2341,8 @@ class StackInspector
             // ..., value(int) => [empty]
             case Constants.IRETURN:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "IRETURN need stack end with : int");
                }
@@ -2140,7 +2352,8 @@ class StackInspector
             // ..., value(long) => [empty]
             case Constants.LRETURN:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isLong() == false))
+                     (!this.stack.get(size - 1)
+                                 .isLong()))
                {
                   this.throwException(instructionHandle, "LRETURN need stack end with : long");
                }
@@ -2150,7 +2363,8 @@ class StackInspector
             // ..., value(float) => [empty]
             case Constants.FRETURN:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isFloat() == false))
+                     (!this.stack.get(size - 1)
+                                 .isFloat()))
                {
                   this.throwException(instructionHandle, "FRETURN need stack end with : float");
                }
@@ -2160,7 +2374,8 @@ class StackInspector
             // ..., value(double) => [empty]
             case Constants.DRETURN:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isDouble() == false))
+                     (!this.stack.get(size - 1)
+                                 .isDouble()))
                {
                   this.throwException(instructionHandle, "DRETURN need stack end with : double");
                }
@@ -2170,7 +2385,8 @@ class StackInspector
             // ..., value(objectref) => [empty]
             case Constants.ARETURN:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "ARETURN need stack end with : objectref");
                }
@@ -2188,7 +2404,8 @@ class StackInspector
             // ..., value(?) => ...
             case Constants.PUTSTATIC:
                if((size < 1) || //
-                     (this.stack.get(size - 1).compatibleWtih(((PUTSTATIC) instruction).getType(constantPool)) == false))
+                     (!this.stack.get(size - 1)
+                                 .compatibleWtih(((PUTSTATIC) instruction).getType(constantPool))))
                {
                   this.throwException(instructionHandle, "PUTSTATIC need stack end with : " + ((PUTSTATIC) instruction).getType(constantPool));
                }
@@ -2198,7 +2415,8 @@ class StackInspector
             // ..., objectref => ..., value(?)
             case Constants.GETFIELD:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "GETFIELD need stack end with : objectref");
                }
@@ -2209,8 +2427,10 @@ class StackInspector
             // ..., objectref, value(?) => ...
             case Constants.PUTFIELD:
                if((size < 2) || //
-                     (this.stack.get(size - 2).isObjectRef() == false) || //
-                     (this.stack.get(size - 1).compatibleWtih(((PUTFIELD) instruction).getType(constantPool)) == false))
+                     (!this.stack.get(size - 2)
+                                 .isObjectRef()) || //
+                     (!this.stack.get(size - 1)
+                                 .compatibleWtih(((PUTFIELD) instruction).getType(constantPool))))
                {
                   this.throwException(instructionHandle, "PUTFIELD need stack end with : objectref " + ((PUTFIELD) instruction).getType(constantPool));
                }
@@ -2223,7 +2443,8 @@ class StackInspector
                this.checkTypes(instructionHandle, types);
 
                if((size < (types.length + 1)) || //
-                     (this.stack.get(size - types.length - 1).isObjectRef() == false))
+                     (!this.stack.get(size - types.length - 1)
+                                 .isObjectRef()))
                {
                   final StringBuilder message = new StringBuilder("INVOKEVIRTUAL need stack end with : objectref");
 
@@ -2239,7 +2460,7 @@ class StackInspector
                this.pop(types.length + 1);
                ret = ((INVOKEVIRTUAL) instruction).getReturnType(constantPool);
 
-               if(Type.VOID.equals(ret) == false)
+               if(!Type.VOID.equals(ret))
                {
                   this.push(ret);
                }
@@ -2250,7 +2471,8 @@ class StackInspector
                this.checkTypes(instructionHandle, types);
 
                if((size < (types.length + 1)) || //
-                     (this.stack.get(size - types.length - 1).isObjectRef() == false))
+                     (!this.stack.get(size - types.length - 1)
+                                 .isObjectRef()))
                {
                   final StringBuilder message = new StringBuilder("INVOKESPECIAL need stack end with : objectref");
 
@@ -2266,7 +2488,7 @@ class StackInspector
                this.pop(types.length + 1);
                ret = ((INVOKESPECIAL) instruction).getReturnType(constantPool);
 
-               if(Type.VOID.equals(ret) == false)
+               if(!Type.VOID.equals(ret))
                {
                   this.push(ret);
                }
@@ -2278,7 +2500,7 @@ class StackInspector
                this.pop(types.length);
                ret = ((INVOKESTATIC) instruction).getReturnType(constantPool);
 
-               if(Type.VOID.equals(ret) == false)
+               if(!Type.VOID.equals(ret))
                {
                   this.push(ret);
                }
@@ -2289,7 +2511,8 @@ class StackInspector
                this.checkTypes(instructionHandle, types);
 
                if((size < (types.length + 1)) || //
-                     (this.stack.get(size - types.length - 1).isObjectRef() == false))
+                     (!this.stack.get(size - types.length - 1)
+                                 .isObjectRef()))
                {
                   final StringBuilder message = new StringBuilder("INVOKEINTERFACE need stack end with : objectref");
 
@@ -2305,7 +2528,7 @@ class StackInspector
                this.pop(types.length + 1);
                ret = ((INVOKEINTERFACE) instruction).getReturnType(constantPool);
 
-               if(Type.VOID.equals(ret) == false)
+               if(!Type.VOID.equals(ret))
                {
                   this.push(ret);
                }
@@ -2317,7 +2540,8 @@ class StackInspector
             // ..., count(int) => ..., arrayref
             case Constants.NEWARRAY:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "NEWARRAY need stack end with : int");
                }
@@ -2328,7 +2552,8 @@ class StackInspector
             // ..., count(int) => ..., arrayref
             case Constants.ANEWARRAY:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isInt() == false))
+                     (!this.stack.get(size - 1)
+                                 .isInt()))
                {
                   this.throwException(instructionHandle, "ANEWARRAY need stack end with : int");
                }
@@ -2339,7 +2564,8 @@ class StackInspector
             // ..., arrayref => ..., length(int)
             case Constants.ARRAYLENGTH:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isArrayRef() == false))
+                     (!this.stack.get(size - 1)
+                                 .isArrayRef()))
                {
                   this.throwException(instructionHandle, "ARRAYLENGTH need stack end with : arrayref");
                }
@@ -2350,7 +2576,8 @@ class StackInspector
             // .., objectref => objectref
             case Constants.ATHROW:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "ATHROW need stack end with : objectref");
                }
@@ -2360,7 +2587,8 @@ class StackInspector
             // ..., objectref => ..., objectref
             case Constants.CHECKCAST:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "CHECKCAST need stack end with : objectref");
                }
@@ -2370,7 +2598,8 @@ class StackInspector
             // .., objectref => ..., result(int)
             case Constants.INSTANCEOF:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "INSTANCEOF need stack end with : objectref");
                }
@@ -2381,7 +2610,8 @@ class StackInspector
             // ..., objectref => ...
             case Constants.MONITORENTER:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "MONITORENTER need stack end with : objectref");
                }
@@ -2391,7 +2621,8 @@ class StackInspector
             // ..., objectref => ...
             case Constants.MONITOREXIT:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "MONITOREXIT need stack end with : objectref");
                }
@@ -2403,12 +2634,13 @@ class StackInspector
                temp = ((MULTIANEWARRAY) instruction).getDimensions() & 0xFFFF;
                condition = size >= temp;
 
-               for(int index = size - temp; (index < size) && (condition == true); index++)
+               for(int index = size - temp; (index < size) && (condition); index++)
                {
-                  condition &= this.stack.get(index).isInt();
+                  condition = this.stack.get(index)
+                                        .isInt();
                }
 
-               if(condition == false)
+               if(!condition)
                {
                   this.throwException(instructionHandle, UtilText.concatenate("MULTIANEWARRAY need stack end with :", UtilText.repeat(" int", temp)));
                }
@@ -2419,7 +2651,8 @@ class StackInspector
             // ..., objectref => ...
             case Constants.IFNULL:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "IFNULL need stack end with : objectref");
                }
@@ -2437,7 +2670,8 @@ class StackInspector
             // ..., objectref => ...
             case Constants.IFNONNULL:
                if((size < 1) || //
-                     (this.stack.get(size - 1).isObjectRef() == false))
+                     (!this.stack.get(size - 1)
+                                 .isObjectRef()))
                {
                   this.throwException(instructionHandle, "IFNONNULL need stack end with : objectref");
                }
@@ -2485,7 +2719,7 @@ class StackInspector
          {
             step = new Step(step.index + 1, this.stack, this.path);
 
-            if(already.add(step) == true)
+            if(already.add(step))
             {
                stackExecution.push(step);
             }

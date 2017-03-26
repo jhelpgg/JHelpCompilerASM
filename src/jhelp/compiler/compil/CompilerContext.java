@@ -13,6 +13,7 @@ import com.sun.org.apache.bcel.internal.generic.BranchHandle;
 import com.sun.org.apache.bcel.internal.generic.ClassGen;
 import com.sun.org.apache.bcel.internal.generic.ConstantPoolGen;
 import com.sun.org.apache.bcel.internal.generic.FieldGen;
+import com.sun.org.apache.bcel.internal.generic.Instruction;
 import com.sun.org.apache.bcel.internal.generic.InstructionHandle;
 import com.sun.org.apache.bcel.internal.generic.InstructionList;
 import com.sun.org.apache.bcel.internal.generic.MethodGen;
@@ -79,7 +80,8 @@ class CompilerContext
    private String                               parent;
    /** "Switch" instructions to resolve later */
    private final List<SelectInformation>        switches;
-
+   /** Try/catch blocks */
+   private final List<TryCatchInformation>      tryCatchs;
    /** Resolved types */
    private final Map<String, Type>              types;
 
@@ -98,6 +100,7 @@ class CompilerContext
       this.labels = new HashMap<String, InstructionHandle>();
       this.exceptions = new ArrayList<String>();
       this.switches = new ArrayList<SelectInformation>();
+      this.tryCatchs = new ArrayList<>();
    }
 
    /**
@@ -145,7 +148,8 @@ class CompilerContext
 
       for(int i = 0; i < size; i++)
       {
-         if(name.equals(reference.get(i).getName()) == true)
+         if(name.equals(reference.get(i)
+                                 .getName()))
          {
             return i;
          }
@@ -156,10 +160,10 @@ class CompilerContext
          throw new CompilerException(lineNumber, "Reference '" + name + "' not found !");
       }
 
-      final Parameter parameter = new Parameter(name, type);
+      final Parameter parameter = new Parameter(name, type, lineNumber);
       reference.add(parameter);
 
-      if((Type.DOUBLE.equals(type) == true) || (Type.LONG.equals(type) == true))
+      if((Type.DOUBLE.equals(type)) || (Type.LONG.equals(type)))
       {
          // Since take 2 index, we add a "space" after them to keep our reference accurate
          reference.add(Parameter.SPACE);
@@ -264,17 +268,17 @@ class CompilerContext
          }
       }
 
-      if("true".equals(value) == true)
+      if("true".equals(value))
       {
          return this.constantPoolGen.addInteger(1);
       }
 
-      if("false".equals(value) == true)
+      if("false".equals(value))
       {
          return this.constantPoolGen.addInteger(0);
       }
 
-      if((value.endsWith("f") == true) || (value.endsWith("F") == true))
+      if((value.endsWith("f")) || (value.endsWith("F")))
       {
          try
          {
@@ -286,7 +290,7 @@ class CompilerContext
          }
       }
 
-      if((value.endsWith("l") == true) || (value.endsWith("L") == true))
+      if((value.endsWith("l")) || (value.endsWith("L")))
       {
          try
          {
@@ -298,7 +302,7 @@ class CompilerContext
          }
       }
 
-      if((value.endsWith("d") == true) || (value.endsWith("D") == true))
+      if((value.endsWith("d")) || (value.endsWith("D")))
       {
          try
          {
@@ -310,7 +314,7 @@ class CompilerContext
          }
       }
 
-      if(value.contains(".") == true)
+      if(value.contains("."))
       {
          try
          {
@@ -342,7 +346,7 @@ class CompilerContext
    {
       className = ((ObjectType) this.stringToType(className)).getClassName();
 
-      if(this.exceptions.contains(className) == false)
+      if(!this.exceptions.contains(className))
       {
          this.exceptions.add(className);
       }
@@ -362,6 +366,25 @@ class CompilerContext
     */
    public void addField(final String name, final String typeName, final int lineNumber) throws CompilerException
    {
+      this.addField(name, typeName, CompilerConstants.ACCES_FLAGS_FIELD, lineNumber);
+   }
+
+   /**
+    * Add field to constant pool
+    *
+    * @param name
+    *           Field name
+    * @param typeName
+    *           Field type
+    * @param accesFlags
+    *           Access flags
+    * @param lineNumber
+    *           Line field declaration
+    * @throws CompilerException
+    *            If field with same name already exists
+    */
+   public void addField(final String name, final String typeName, final int accesFlags, final int lineNumber) throws CompilerException
+   {
       final FieldInformation fieldInformation = this.fields.get(name);
 
       if(fieldInformation != null)
@@ -370,7 +393,7 @@ class CompilerContext
       }
 
       final Type type = this.stringToType(typeName);
-      final FieldGen fieldGen = new FieldGen(CompilerConstants.ACCES_FLAGS_FIELD, type, name, this.constantPoolGen);
+      final FieldGen fieldGen = new FieldGen(accesFlags, type, name, this.constantPoolGen);
       this.classGen.addField(fieldGen.getField());
       final int reference = this.constantPoolGen.addFieldref(this.className, name, type.getSignature());
       this.fields.put(name, new FieldInformation(name, type, reference, lineNumber));
@@ -405,7 +428,7 @@ class CompilerContext
       final Type type = this.stringToType(typeName);
       final Type classReference = this.stringToType(className);
 
-      if((classReference instanceof ObjectType) == false)
+      if(!(classReference instanceof ObjectType))
       {
          throw new CompilerException(lineNumber, className + " not a class reference !");
       }
@@ -449,7 +472,7 @@ class CompilerContext
          throw new CompilerException(lineNumber, "import must be declare earlier in file !");
       }
 
-      if(this.imports.contains(className) == false)
+      if(!this.imports.contains(className))
       {
          this.imports.add(className);
       }
@@ -474,7 +497,7 @@ class CompilerContext
 
       className = ((ObjectType) this.stringToType(className)).getClassName();
 
-      if(this.interfaces.contains(className) == false)
+      if(!this.interfaces.contains(className))
       {
          this.interfaces.add(className);
       }
@@ -494,7 +517,7 @@ class CompilerContext
     */
    public void addLabel(final String label, final InstructionHandle instructionHandle, final int lineNumber) throws CompilerException
    {
-      if(this.labels.containsKey(label) == true)
+      if(this.labels.containsKey(label))
       {
          throw new CompilerException(lineNumber, "Label " + label + " already defined !");
       }
@@ -559,7 +582,7 @@ class CompilerContext
    {
       final Type type = this.stringToType(className);
 
-      if((type instanceof ObjectType) == false)
+      if(!(type instanceof ObjectType))
       {
          throw new CompilerException(lineNumber, "Not a reference to a class : " + className);
       }
@@ -575,7 +598,7 @@ class CompilerContext
       {
          final Matcher matcher = CompilerContext.PATTERN_SIGNATURE_JAVA.matcher(signature);
 
-         if(matcher.matches() == false)
+         if(!matcher.matches())
          {
             throw new CompilerException(lineNumber, "Not valid method signature :\n" + signature);
          }
@@ -676,7 +699,7 @@ class CompilerContext
     */
    public void checkType(final String name, final Type type, final boolean isArray, final boolean nullAllowed, final int lineNumber) throws CompilerException
    {
-      final String realName = type + (isArray == true
+      final String realName = type + (isArray
             ? "[]"
             : "");
       Type parameterType = this.getLocalReferenceType(name);
@@ -688,23 +711,23 @@ class CompilerContext
 
       if(parameterType instanceof ArrayType)
       {
-         if(type.equals(Type.OBJECT) == true)
+         if(type.equals(Type.OBJECT))
          {
             return;
          }
 
-         if(isArray == false)
+         if(!isArray)
          {
             throw new CompilerException(lineNumber, "Reference '" + name + "' is a " + parameterType + " not compatible with " + realName);
          }
 
          parameterType = ((ArrayType) parameterType).getBasicType();
       }
-      else if(isArray == true)
+      else if(isArray)
       {
-         if(parameterType.equals(Type.NULL) == true)
+         if(parameterType.equals(Type.NULL))
          {
-            if(nullAllowed == false)
+            if(!nullAllowed)
             {
                throw new CompilerException(lineNumber, "Null value forbidden !");
             }
@@ -715,14 +738,14 @@ class CompilerContext
          throw new CompilerException(lineNumber, "Reference '" + name + "' is a " + parameterType + " not compatible with " + realName);
       }
 
-      if(parameterType.equals(type) == true)
+      if(parameterType.equals(type))
       {
          return;
       }
 
-      if(parameterType.equals(Type.NULL) == true)
+      if(parameterType.equals(Type.NULL))
       {
-         if(nullAllowed == false)
+         if(!nullAllowed)
          {
             throw new CompilerException(lineNumber, "Null value forbidden !");
          }
@@ -745,12 +768,12 @@ class CompilerContext
          throw new CompilerException(lineNumber, "Reference '" + name + "' is a " + parameterType + " not compatible with " + realName);
       }
 
-      if((type instanceof BasicType) == false)
+      if(!(type instanceof BasicType))
       {
          throw new CompilerException(lineNumber, "Reference '" + name + "' is a " + parameterType + " not compatible with " + realName);
       }
 
-      if(isArray == true)
+      if(isArray)
       {
          throw new CompilerException(lineNumber, "Reference '" + name + "' is a " + parameterType + " not compatible with " + realName);
       }
@@ -796,6 +819,8 @@ class CompilerContext
    /**
     * Create and add a method
     *
+    * @param accesFlags
+    *           Method access flags
     * @param returnType
     *           Method return type
     * @param methodName
@@ -806,13 +831,15 @@ class CompilerContext
     *           Method parameters name
     * @param instructionList
     *           Method code
+    * @param intervals
+    *           Intervals of instruction bloc
     * @param linesTable
     *           Method source code lines
     * @throws CompilerException
     *            On method creation failed
     */
-   public void createMethod(final Type returnType, final String methodName, final Type[] parametersType, final String[] parametersName,
-         final InstructionList instructionList, final List<Pair<InstructionHandle, Integer>> linesTable) throws CompilerException
+   public void createMethod(final int accesFlags, final Type returnType, final String methodName, final Type[] parametersType, final String[] parametersName,
+         final InstructionList instructionList, final List<Pair<InstructionHandle, Integer>> linesTable, final Intervals intervals) throws CompilerException
    {
       // Resolve branches
       InstructionHandle instructionHandle;
@@ -861,9 +888,34 @@ class CompilerContext
          selectInformation.resolveDefaultLabel(instructionHandle);
       }
 
+      int endLine;
+      String labelGoto;
+
+      // Resolve exception table
+      for(final TryCatchInformation tryCatchInformation : this.tryCatchs)
+      {
+         tryCatchInformation.setStartInstruction(UtilCompiler.obtainInstructionAtOrAfter(tryCatchInformation.getStartLine(), linesTable));
+         endLine = tryCatchInformation.getEndLine();
+         labelGoto = tryCatchInformation.getGotoLabel();
+
+         if((endLine < 0) || (labelGoto == null))
+         {
+            throw new CompilerException(tryCatchInformation.getStartLine(), "Miss the corresponding CATCH for TRY " + tryCatchInformation.getExceptionName());
+         }
+
+         tryCatchInformation.setEndInstruction(UtilCompiler.obtainIntstructionAtOrBefore(endLine, linesTable));
+
+         if(!this.labels.containsKey(labelGoto))
+         {
+            throw new CompilerException(endLine, "Label " + labelGoto + " not defined !");
+         }
+
+         tryCatchInformation.setGotoInstruction(this.labels.get(labelGoto));
+      }
+
       // Create and initialize the method generator
-      final MethodGen methodGen = new MethodGen(CompilerConstants.ACCES_FLAGS_METHOD, returnType, parametersType, parametersName, methodName, this.className,
-            instructionList, this.constantPoolGen);
+      final MethodGen methodGen = new MethodGen(accesFlags, returnType, parametersType, parametersName, methodName, this.className, instructionList,
+            this.constantPoolGen);
 
       for(final String exception : this.exceptions)
       {
@@ -877,6 +929,7 @@ class CompilerContext
       final InstructionHandle end = instructionList.getEnd();
       final int size = this.localeVariables.size();
       Parameter parameter;
+      Interval interval;
 
       for(int i = this.indexMarkReference; i < size; i++)
       {
@@ -884,8 +937,24 @@ class CompilerContext
 
          if(parameter != Parameter.SPACE)
          {
-            methodGen.addLocalVariable(parameter.getName(), parameter.getType(), start, end);
+            interval = intervals.obtainInterval(parameter.getLineNumber());
+
+            if((interval != null) && (interval.handleStart != null) && (interval.handleEnd != null))
+            {
+               methodGen.addLocalVariable(parameter.getName(), parameter.getType(), interval.handleStart, interval.handleEnd);
+            }
+            else
+            {
+               methodGen.addLocalVariable(parameter.getName(), parameter.getType(), start, end);
+            }
          }
+      }
+
+      // Add exception table
+      for(final TryCatchInformation tryCatchInformation : this.tryCatchs)
+      {
+         methodGen.addExceptionHandler(tryCatchInformation.getStartInstruction(), tryCatchInformation.getEndInstruction(),
+               tryCatchInformation.getGotoInstruction(), tryCatchInformation.getExceptionType());
       }
 
       // Add line code reference
@@ -895,7 +964,7 @@ class CompilerContext
       }
 
       final StackInspector stackInspector = new StackInspector(instructionList, linesTable, this);
-      stackInspector.checkStack(this.constantPoolGen);
+      stackInspector.checkStack(this.constantPoolGen, this.tryCatchs);
 
       // Create and add the method to the class
       this.constantPoolGen.addMethodref(methodGen);
@@ -915,7 +984,7 @@ class CompilerContext
     * @throws CompilerException
     *            If value not a valid constant
     */
-   public com.sun.org.apache.bcel.internal.generic.PUSH createPush(final String value, final int lineNumber) throws CompilerException
+   public Instruction createPush(final String value, final int lineNumber) throws CompilerException
    {
       final int length = value.length();
 
@@ -923,7 +992,7 @@ class CompilerContext
       {
          if((value.charAt(0) == '"') && (value.charAt(length - 1) == '"'))
          {
-            return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, value.substring(1, length - 1));
+            return new com.sun.org.apache.bcel.internal.generic.LDC(this.addConstant(value, lineNumber));
          }
 
          if(length > 2)
@@ -937,26 +1006,26 @@ class CompilerContext
                   throw new CompilerException(lineNumber, "Invalid character !");
                }
 
-               return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, 0xFFFF & character.charAt(0));
+               return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, 0xFFFF & character.charAt(0)).getInstruction();
             }
          }
       }
 
-      if("true".equals(value) == true)
+      if("true".equals(value))
       {
-         return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, true);
+         return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, true).getInstruction();
       }
 
-      if("false".equals(value) == true)
+      if("false".equals(value))
       {
-         return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, false);
+         return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, false).getInstruction();
       }
 
-      if((value.endsWith("f") == true) || (value.endsWith("F") == true))
+      if((value.endsWith("f")) || (value.endsWith("F")))
       {
          try
          {
-            return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, Float.parseFloat(value.substring(0, length - 1)));
+            return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, Float.parseFloat(value.substring(0, length - 1))).getInstruction();
          }
          catch(final Exception exception)
          {
@@ -964,11 +1033,11 @@ class CompilerContext
          }
       }
 
-      if((value.endsWith("l") == true) || (value.endsWith("L") == true))
+      if((value.endsWith("l")) || (value.endsWith("L")))
       {
          try
          {
-            return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, Long.parseLong(value.substring(0, length - 1)));
+            return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, Long.parseLong(value.substring(0, length - 1))).getInstruction();
          }
          catch(final Exception exception)
          {
@@ -976,11 +1045,11 @@ class CompilerContext
          }
       }
 
-      if((value.endsWith("d") == true) || (value.endsWith("D") == true))
+      if((value.endsWith("d")) || (value.endsWith("D")))
       {
          try
          {
-            return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, Double.parseDouble(value.substring(0, length - 1)));
+            return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, Double.parseDouble(value.substring(0, length - 1))).getInstruction();
          }
          catch(final Exception exception)
          {
@@ -988,11 +1057,11 @@ class CompilerContext
          }
       }
 
-      if(value.contains(".") == true)
+      if(value.contains("."))
       {
          try
          {
-            return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, Double.parseDouble(value));
+            return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, Double.parseDouble(value)).getInstruction();
          }
          catch(final Exception exception)
          {
@@ -1002,7 +1071,7 @@ class CompilerContext
 
       try
       {
-         return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, Integer.parseInt(value));
+         return new com.sun.org.apache.bcel.internal.generic.PUSH(this.constantPoolGen, Integer.parseInt(value)).getInstruction();
       }
       catch(final Exception exception)
       {
@@ -1080,13 +1149,14 @@ class CompilerContext
    {
       final int size = this.localeVariables.size();
 
-      for(int i = 0; i < size; i++)
-      {
-         if(name.equals(this.localeVariables.get(i).getName()) == true)
-         {
-            return this.localeVariables.get(i).getType();
-         }
-      }
+       for (Parameter localeVariable : this.localeVariables)
+       {
+           if (name.equals(localeVariable
+                                   .getName()))
+           {
+               return localeVariable.getType();
+           }
+       }
 
       return null;
    }
@@ -1122,6 +1192,7 @@ class CompilerContext
       this.labels.clear();
       this.exceptions.clear();
       this.switches.clear();
+      this.tryCatchs.clear();
    }
 
    /**
@@ -1142,7 +1213,7 @@ class CompilerContext
       this.exceptions.clear();
       this.switches.clear();
 
-      if(addThis == true)
+      if(addThis)
       {
          this.addGetLocalReference("this", this.className, lineNumber);
       }
@@ -1154,6 +1225,115 @@ class CompilerContext
    public void markStartReference()
    {
       this.indexMarkReference = this.localeVariables.size();
+   }
+
+   /**
+    * Convert given type name to exception type
+    *
+    * @param typeName
+    *           Type name
+    * @param lineNumber
+    *           Line number reference
+    * @return Computed exception type
+    * @throws CompilerException
+    *            If type name not a valid exception type
+    */
+   public ObjectType obtainExceptionType(final String typeName, final int lineNumber) throws CompilerException
+   {
+      final ObjectType objectType = this.obtainType(typeName, lineNumber);
+
+      try
+      {
+         if(!Reflector.isSubTypeOf(Class.forName(objectType.getClassName()), Throwable.class))
+         {
+            throw new CompilerException(lineNumber, typeName + ":" + objectType + " not a java.lang.Throwable !");
+         }
+      }
+      catch(final ClassNotFoundException exception)
+      {
+         throw new CompilerException(lineNumber, "Invalid type : " + typeName + ":" + objectType, exception);
+      }
+
+      return objectType;
+   }
+
+   /**
+    * Obtain try/catch block by its name.<br>
+    * Returns {@code null} if not found
+    *
+    * @param exceptionName
+    *           Exception name
+    * @return Desired try/catch block OR {@code null} if not found
+    */
+   public TryCatchInformation obtainTryCatch(final String exceptionName)
+   {
+      for(final TryCatchInformation tryCatchInformation : this.tryCatchs)
+      {
+         if(exceptionName.equals(tryCatchInformation.getExceptionName()))
+         {
+            return tryCatchInformation;
+         }
+      }
+
+      return null;
+   }
+
+   /**
+    * Obtain/create a try/catch block
+    *
+    * @param exceptionName
+    *           Exception name
+    * @param startLineNumber
+    *           {@link OpcodeConstants#Z_TRY} line code
+    * @param exceptionType
+    *           Exception type
+    * @return Try/catch block
+    * @throws CompilerException
+    *            If try/catch block already exists for given name, but have different start line or different exception type
+    */
+   public TryCatchInformation obtainTryCatch(final String exceptionName, final int startLineNumber, final ObjectType exceptionType) throws CompilerException
+   {
+      TryCatchInformation tryCatchInformation = this.obtainTryCatch(exceptionName);
+
+      if(tryCatchInformation == null)
+      {
+         tryCatchInformation = new TryCatchInformation(exceptionName, startLineNumber, exceptionType);
+         this.tryCatchs.add(tryCatchInformation);
+         return tryCatchInformation;
+      }
+
+      if((tryCatchInformation.getStartLine() != startLineNumber) || !tryCatchInformation.getExceptionType().equals(exceptionType))
+      {
+         throw new CompilerException(startLineNumber, exceptionName + " already defined for line=" + tryCatchInformation.getStartLine() + " and "
+               + tryCatchInformation.getExceptionType() + " different of given " + startLineNumber + ":" + exceptionType);
+      }
+
+      return tryCatchInformation;
+   }
+
+   /**
+    * Obtain/create a type from name
+    *
+    * @param typeName
+    *           Type name
+    * @param lineNumber
+    *           Line number reference
+    * @return The type
+    * @throws CompilerException
+    *            If given name not a valid type
+    */
+   public ObjectType obtainType(final String typeName, final int lineNumber) throws CompilerException
+   {
+      final Type type = this.stringToType(typeName);
+
+      if((type == null) || !(type instanceof ObjectType))
+      {
+         throw new CompilerException(lineNumber, typeName + " : Invalid object type");
+      }
+
+      final ObjectType objectType = (ObjectType) type;
+      this.constantPoolGen.addClass(objectType);
+      return objectType;
    }
 
    /**
@@ -1240,79 +1420,79 @@ class CompilerContext
     */
    public Type stringToType(final String string)
    {
-      if(string.endsWith("[]") == true)
+      if(string.endsWith("[]"))
       {
          final Type base = this.stringToType(string.substring(0, string.length() - 2));
          return new ArrayType(base, 1);
       }
 
       // Test if it is a primitive or well known type
-      if(Reflector.PRIMITIVE_BOOLEAN.equals(string) == true)
+      if(Reflector.PRIMITIVE_BOOLEAN.equals(string))
       {
          return Type.BOOLEAN;
       }
 
-      if(Reflector.PRIMITIVE_BYTE.equals(string) == true)
+      if(Reflector.PRIMITIVE_BYTE.equals(string))
       {
          return Type.BYTE;
       }
 
-      if(Reflector.PRIMITIVE_CHAR.equals(string) == true)
+      if(Reflector.PRIMITIVE_CHAR.equals(string))
       {
          return Type.CHAR;
       }
 
-      if(Reflector.PRIMITIVE_DOUBLE.equals(string) == true)
+      if(Reflector.PRIMITIVE_DOUBLE.equals(string))
       {
          return Type.DOUBLE;
       }
 
-      if(Reflector.PRIMITIVE_FLOAT.equals(string) == true)
+      if(Reflector.PRIMITIVE_FLOAT.equals(string))
       {
          return Type.FLOAT;
       }
 
-      if(Reflector.PRIMITIVE_INT.equals(string) == true)
+      if(Reflector.PRIMITIVE_INT.equals(string))
       {
          return Type.INT;
       }
 
-      if(Reflector.PRIMITIVE_LONG.equals(string) == true)
+      if(Reflector.PRIMITIVE_LONG.equals(string))
       {
          return Type.LONG;
       }
 
-      if(Reflector.PRIMITIVE_SHORT.equals(string) == true)
+      if(Reflector.PRIMITIVE_SHORT.equals(string))
       {
          return Type.SHORT;
       }
 
-      if("null".equals(string) == true)
+      if("null".equals(string))
       {
          return Type.NULL;
       }
 
-      if("void".equals(string) == true)
+      if("void".equals(string))
       {
          return Type.VOID;
       }
 
-      if(("Object".equals(string) == true) || ("java.lang.Object".equals(string) == true))
+      if(("Object".equals(string)) || ("java.lang.Object".equals(string)))
       {
          return Type.OBJECT;
       }
 
-      if(("String".equals(string) == true) || ("java.lang.String".equals(string) == true))
+      if(("String".equals(string)) || ("java.lang.String".equals(string)))
       {
          return Type.STRING;
       }
 
-      if(("StringBuffer".equals(string) == true) || ("java.lang.StringBuffer".equals(string) == true))
+      if(("StringBuffer".equals(string)) || ("java.lang.StringBuffer".equals(string)))
       {
          return Type.STRINGBUFFER;
       }
 
-      if(("Throwable".equals(string) == true) || ("java.lang.Throwable".equals(string) == true))
+      if(("Throwable".equals(string)) || ("java.lang.Throwable".equals(string)))
       {
          return Type.THROWABLE;
       }
@@ -1323,7 +1503,7 @@ class CompilerContext
       // If type not already know
       if(type == null)
       {
-         if((string.startsWith("[") == true) || (string.startsWith("L") == true))
+         if((string.startsWith("[")) || (string.startsWith("L")))
          {
             // signature type
             type = Type.getType(string);
@@ -1341,7 +1521,7 @@ class CompilerContext
                // Look in imports
                for(final String imported : this.imports)
                {
-                  if(imported.endsWith(string) == true)
+                  if(imported.endsWith(string))
                   {
                      search = imported;
                      break;
@@ -1350,7 +1530,7 @@ class CompilerContext
 
                if(search == null)
                {
-                  if(UtilCompiler.isJavaLangClass(string) == true)
+                  if(UtilCompiler.isJavaLangClass(string))
                   {
                      // If inside java.lang package
                      search = "java.lang." + string;

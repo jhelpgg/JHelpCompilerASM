@@ -539,7 +539,7 @@ public class ClassManager
 
       for(final Constructor<?> cons : claz.getConstructors())
       {
-         if(Reflector.typeMatch(types, cons.getParameterTypes()) == true)
+         if(Reflector.typeMatch(types, cons.getParameterTypes()))
          {
             constructor = cons;
             break;
