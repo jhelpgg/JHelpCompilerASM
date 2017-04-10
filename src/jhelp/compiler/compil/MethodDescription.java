@@ -1,13 +1,22 @@
-package jhelp.compiler.compil;
+/*
+ * License :
+ * The following code is deliver as is. I take care that code compile and work, but I am not responsible about any damage it may cause.
+ * You can use, modify, the code as your need for any usage.
+ * But you can't do any action that avoid me or other person use, modify this code.
+ * The code is free for usage and modification, you can't change that fact.
+ * JHelp
+ */
 
-import java.util.ArrayList;
-import java.util.List;
+package jhelp.compiler.compil;
 
 import com.sun.org.apache.bcel.internal.Constants;
 import com.sun.org.apache.bcel.internal.generic.InstructionHandle;
 import com.sun.org.apache.bcel.internal.generic.InstructionList;
 import com.sun.org.apache.bcel.internal.generic.ObjectType;
 import com.sun.org.apache.bcel.internal.generic.Type;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import jhelp.util.list.Pair;
 import jhelp.util.text.UtilText;
@@ -20,43 +29,20 @@ import jhelp.util.text.UtilText;
 class MethodDescription
       implements CompilerConstants
 {
-   /**
-    * Compute label name used by subroutine : {@link #Z_SUB_S}, {@link #Z_SUB_E}, {@link #Z_SUB_C}
-    *
-    * @param subroutineName
-    *           Subroutine name
-    * @return Label name
-    */
-   private static String subroutineLabel(final String subroutineName)
-   {
-      return UtilText.concatenate("jhelpSubroutine_", subroutineName, "_Label");
-   }
-
-   /**
-    * Compute variable name that store return address used by subroutine : {@link #Z_SUB_S}, {@link #Z_SUB_E}, {@link #Z_SUB_C}
-    *
-    * @param subroutineName
-    *           Subroutine name
-    * @return Variable name
-    */
-   private static String subroutineReturnValue(final String subroutineName)
-   {
-      return UtilText.concatenate("jhelpSubroutine_", subroutineName, "_ReturnValue");
-   }
-
    /** Method access flag */
    private final int             accesFlags;
    /** Method code */
    private final List<CodeLine>  code;
-   /** Indicates if inside the code block */
-   private boolean               insideCode;
    /** Method name */
    private final String          name;
    /** Method parameters */
    private final List<Parameter> parameters;
+    /**
+     * Indicates if inside the code block
+     */
+   private       boolean         insideCode;
    /** Return type */
-   private Type                  returnType;
-
+   private       Type            returnType;
    /**
     * Create a new instance of MethodDescription
     *
@@ -67,7 +53,6 @@ class MethodDescription
    {
       this(name, CompilerConstants.ACCES_FLAGS_METHOD);
    }
-
    /**
     * Create a new instance of MethodDescription.<br>
     * Flag is {{@link Constants#ACC_PUBLIC},{@link Constants#ACC_PRIVATE},{@link Constants#ACC_PROTECTED}} [|
@@ -120,91 +105,114 @@ class MethodDescription
    public void appendCode(final CompilerContext compilerContext, final String instruction, final List<String> parameters, final int lineNumber)
          throws CompilerException
    {
-      if(OpcodeConstants.Z_SUB_S.equals(instruction))
-      {
-         if(parameters.size() < 1)
-         {
-            throw new CompilerException(lineNumber, "SUB_S miss subroutine name !");
-         }
+       if (OpcodeConstants.Z_SUB_S.equals(instruction))
+       {
+           if (parameters.size() < 1)
+           {
+               throw new CompilerException(lineNumber, "SUB_S miss subroutine name !");
+           }
 
-         final String subroutineName = parameters.get(0);
-         parameters.clear();
-         parameters.add(MethodDescription.subroutineLabel(subroutineName));
-         this.code.add(new CodeLine(OpcodeConstants.Z_LABEL, parameters, lineNumber));
-         parameters.clear();
-         parameters.add("Object");
-         parameters.add(MethodDescription.subroutineReturnValue(subroutineName));
-         this.code.add(new CodeLine(OpcodeConstants.Z_VAR, parameters, lineNumber));
-         parameters.remove(0);
-         this.code.add(new CodeLine(OpcodeConstants.ASTORE, parameters, lineNumber));
-         return;
-      }
+           final String subroutineName = parameters.get(0);
+           parameters.clear();
+           parameters.add(MethodDescription.subroutineLabel(subroutineName));
+           this.code.add(new CodeLine(OpcodeConstants.Z_LABEL, parameters, lineNumber));
+           parameters.clear();
+           parameters.add("Object");
+           parameters.add(MethodDescription.subroutineReturnValue(subroutineName));
+           this.code.add(new CodeLine(OpcodeConstants.Z_VAR, parameters, lineNumber));
+           parameters.remove(0);
+           this.code.add(new CodeLine(OpcodeConstants.ASTORE, parameters, lineNumber));
+           return;
+       }
 
-      if(OpcodeConstants.Z_SUB_E.equals(instruction))
-      {
-         if(parameters.size() < 1)
-         {
-            throw new CompilerException(lineNumber, "SUB_E miss subroutine name !");
-         }
+       if (OpcodeConstants.Z_SUB_E.equals(instruction))
+       {
+           if (parameters.size() < 1)
+           {
+               throw new CompilerException(lineNumber, "SUB_E miss subroutine name !");
+           }
 
-         final String subroutineName = parameters.get(0);
-         parameters.set(0, MethodDescription.subroutineReturnValue(subroutineName));
-         this.code.add(new CodeLine(OpcodeConstants.RET, parameters, lineNumber));
-         return;
-      }
+           final String subroutineName = parameters.get(0);
+           parameters.set(0, MethodDescription.subroutineReturnValue(subroutineName));
+           this.code.add(new CodeLine(OpcodeConstants.RET, parameters, lineNumber));
+           return;
+       }
 
-      if(OpcodeConstants.Z_SUB_C.equals(instruction))
-      {
-         if(parameters.size() < 1)
-         {
-            throw new CompilerException(lineNumber, "SUB_C miss subroutine name !");
-         }
+       if (OpcodeConstants.Z_SUB_C.equals(instruction))
+       {
+           if (parameters.size() < 1)
+           {
+               throw new CompilerException(lineNumber, "SUB_C miss subroutine name !");
+           }
 
-         final String subroutineName = parameters.get(0);
-         parameters.set(0, MethodDescription.subroutineLabel(subroutineName));
-         this.code.add(new CodeLine(OpcodeConstants.JSR, parameters, lineNumber));
-         return;
-      }
+           final String subroutineName = parameters.get(0);
+           parameters.set(0, MethodDescription.subroutineLabel(subroutineName));
+           this.code.add(new CodeLine(OpcodeConstants.JSR, parameters, lineNumber));
+           return;
+       }
 
-      if(OpcodeConstants.Z_TRY.equals(instruction))
-      {
-         if(parameters.size() < 2)
-         {
-            throw new CompilerException(lineNumber, OpcodeConstants.Z_TRY + " miss some parameters");
-         }
+       if (OpcodeConstants.Z_TRY.equals(instruction))
+       {
+           if (parameters.size() < 2)
+           {
+               throw new CompilerException(lineNumber, OpcodeConstants.Z_TRY + " miss some parameters");
+           }
 
-         final ObjectType exceptionType = compilerContext.obtainExceptionType(parameters.get(0), lineNumber);
-         final String exceptionName = parameters.get(1);
-         compilerContext.obtainTryCatch(exceptionName, lineNumber, exceptionType);
-         this.code.add(new CodeLine(OpcodeConstants.Z_VAR, parameters, lineNumber));
-         return;
-      }
+           final ObjectType exceptionType = compilerContext.obtainExceptionType(parameters.get(0), lineNumber);
+           final String     exceptionName = parameters.get(1);
+           compilerContext.obtainTryCatch(exceptionName, lineNumber, exceptionType);
+           this.code.add(new CodeLine(OpcodeConstants.Z_VAR, parameters, lineNumber));
+           return;
+       }
 
-      if(OpcodeConstants.Z_CATCH.equals(instruction))
-      {
-         if(parameters.size() < 2)
-         {
-            throw new CompilerException(lineNumber, OpcodeConstants.Z_CATCH + " miss some parameters");
-         }
+       if (OpcodeConstants.Z_CATCH.equals(instruction))
+       {
+           if (parameters.size() < 2)
+           {
+               throw new CompilerException(lineNumber, OpcodeConstants.Z_CATCH + " miss some parameters");
+           }
 
-         final String exceptionName = parameters.get(0);
-         final String labelGoto = parameters.get(1);
-         final TryCatchInformation tryCatchInformation = compilerContext.obtainTryCatch(exceptionName);
+           final String              exceptionName       = parameters.get(0);
+           final String              labelGoto           = parameters.get(1);
+           final TryCatchInformation tryCatchInformation = compilerContext.obtainTryCatch(exceptionName);
 
-         if(tryCatchInformation == null)
-         {
-            throw new CompilerException(lineNumber, "No TRY for " + exceptionName);
-         }
+           if (tryCatchInformation == null)
+           {
+               throw new CompilerException(lineNumber, "No TRY for " + exceptionName);
+           }
 
-         tryCatchInformation.setEndLine(lineNumber - 1);
-         tryCatchInformation.setGotoLabel(labelGoto);
-         parameters.remove(1);
-         this.code.add(new CodeLine(OpcodeConstants.ASTORE, parameters, lineNumber));
-         return;
-      }
+           tryCatchInformation.setEndLine(lineNumber - 1);
+           tryCatchInformation.setGotoLabel(labelGoto);
+           parameters.remove(1);
+           this.code.add(new CodeLine(OpcodeConstants.ASTORE, parameters, lineNumber));
+           return;
+       }
 
-      this.code.add(new CodeLine(instruction, parameters, lineNumber));
+       this.code.add(new CodeLine(instruction, parameters, lineNumber));
    }
+
+    /**
+     * Compute label name used by subroutine : {@link #Z_SUB_S}, {@link #Z_SUB_E}, {@link #Z_SUB_C}
+     *
+     * @param subroutineName Subroutine name
+     * @return Label name
+     */
+    private static String subroutineLabel(final String subroutineName)
+    {
+        return UtilText.concatenate("jhelpSubroutine_", subroutineName, "_Label");
+    }
+
+    /**
+     * Compute variable name that store return address used by subroutine : {@link #Z_SUB_S}, {@link #Z_SUB_E},
+     * {@link #Z_SUB_C}
+     *
+     * @param subroutineName Subroutine name
+     * @return Variable name
+     */
+    private static String subroutineReturnValue(final String subroutineName)
+    {
+        return UtilText.concatenate("jhelpSubroutine_", subroutineName, "_ReturnValue");
+    }
 
    /**
     * Compile the method and add it
@@ -290,23 +298,23 @@ class MethodDescription
    }
 
    /**
-    * Indicates if inside code block
-    *
-    * @return {@code true} if inside code block
-    */
-   public boolean insideCode()
-   {
-      return this.insideCode;
-   }
-
-   /**
     * Return type
     *
-    * @param retrunType
+    * @param returnType
     *           Return type
     */
-   public void setReturnType(final Type retrunType)
+   public void setReturnType(final Type returnType)
    {
-      this.returnType = retrunType;
+       this.returnType = returnType;
    }
+
+    /**
+     * Indicates if inside code block
+     *
+     * @return {@code true} if inside code block
+     */
+    public boolean insideCode()
+    {
+        return this.insideCode;
+    }
 }
